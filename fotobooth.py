@@ -47,6 +47,9 @@ def update_oled(e):
     iteration = 0
     photo_count = 0
     updated = False
+    with open('/home/pi/programs/log_backup.txt', 'r') as f:
+        lastbackup = f.read()
+        f.close()
     while True:
         if animation_finished.is_set() and updated == False:
             photo_count += 1
@@ -73,17 +76,26 @@ def update_oled(e):
                         
                     if iteration == 2:
                         cpu = CPUTemperature()
-                        draw.text((10, 4), "CPU Temperatur: ", fill=1)
-                        draw.text((50, 26), str(cpu.temperature) +" °C", fill=1) 
+                        load = round((cpu.temperature/85)*100,2)
+                        draw.text((6, 4), "CPU Temperatur: ", fill=1)
+                        draw.text((50, 16), str(round(cpu.temperature,2)) +" °C", fill=1)
+                        draw.text((6, 28), "CPU Load Percentage: ", fill=1)
+                        draw.text((50, 40), str(load) +" %", fill=1) 
                     if iteration == 3:
                         disk = psutil.disk_usage('/')
                         disk_free = round((disk.free /2**30),2)
-                        draw.text((10, 4), "Freier Speicher: ", fill=1)
-                        draw.text((50, 26), str(disk_free) +" GB", fill=1) 
-                
+                        disk_total = round((disk.total /2**30),2)
+                        disk_percentage = round((disk_free /disk_total)*100)
+                        draw.text((6, 4), "Freier Speicher: ", fill=1)
+                        draw.text((20, 16), str(disk_free) +" GB ("+str(disk_percentage)+"%)", fill=1)
+                        draw.text((6, 28), "Gesamtspeicher: ", fill=1)
+                        draw.text((20, 40), str(disk_total) +" GB", fill=1) 
+                    if iteration == 4:
+                        draw.text((10, 4), "Last Backup: ", fill=1)
+                        draw.text((10, 26), lastbackup, fill=1) 
             e.clear()
             iteration += 1
-        if iteration == 4:
+        if iteration == 5:
             iteration = 0
         
     
@@ -353,12 +365,18 @@ if __name__ == '__main__':
     GPIO.setup(backup_vcc, GPIO.OUT)
     GPIO.output(backup_vcc,1)
     
+    
+    
+    with open('/home/pi/programs/log_backup.txt', 'r') as f:
+        lastbackup = f.read()
+        f.close()
     serial = i2c(port=1, address=0x3C)
     # substitute ssd1331(...) or sh1106(...) below if using that device
     device = sh1106(serial)
     with canvas(device) as draw:
             draw.rectangle(device.bounding_box, outline="white", fill="black")
-            draw.text((4, 4), "Setup", fill=1)
+            draw.text((4, 4), "Setup; Last Backup:", fill=1)
+            draw.text((4,30), lastbackup, fill=1)
 
     first_button_pushed = multiprocessing.Event()
     animation_finished = multiprocessing.Event()
@@ -377,6 +395,14 @@ if __name__ == '__main__':
     def but2_callback(channel):
         print('backup button pushed')
         GPIO.output(led_pin,1)
+        ledcounter = 0
+        for ledcounter in range (10):
+            GPIO.output(led_pin,1)
+            time.sleep(0.25)
+            GPIO.output(led_pin,0)
+            time.sleep(0.25)
+        print('backing up now')
+        subprocess.call("/home/pi/programs/usbbackup/backup.sh")    
         #start bash script to backup/copy data here
         
         #start bash
