@@ -337,11 +337,23 @@ if __name__ == '__main__':
         raise RuntimeError('ws2811_init failed with code {0}'.format(resp))
 
     # initialize GPIO buttons
+    #capture button
     GPIO.setmode(GPIO.BCM)
     button1_pin = 23
     GPIO.setup(button1_pin, GPIO.IN)
+    
+    #Button Backup
+    button2_pin = 24
+    GPIO.setup(button2_pin, GPIO.IN)
+    #LED Backup
+    led_pin = 25
+    GPIO.setup(led_pin, GPIO.OUT)
+    #Backup VCC
+    backup_vcc = 8
+    GPIO.setup(backup_vcc, GPIO.OUT)
+    GPIO.output(backup_vcc,1)
+    
     serial = i2c(port=1, address=0x3C)
-
     # substitute ssd1331(...) or sh1106(...) below if using that device
     device = sh1106(serial)
     with canvas(device) as draw:
@@ -361,10 +373,20 @@ if __name__ == '__main__':
             #first_button_pushed.clear()
         #else:
         first_button_pushed.set()
-            
+    # GPIO callbacks
+    def but2_callback(channel):
+        print('backup button pushed')
+        GPIO.output(led_pin,1)
+        #start bash script to backup/copy data here
+        
+        #start bash
+    
 
     # GPIO callbacks hooks
     GPIO.add_event_detect(button1_pin, GPIO.RISING, callback=but1_callback, bouncetime=300)
+    # GPIO callbacks hooks
+    GPIO.add_event_detect(button2_pin, GPIO.FALLING, callback=but2_callback, bouncetime=300)
+
 
     # a process used to run the "long_processing" function in background
     # the first_button_pushed event is passed along
