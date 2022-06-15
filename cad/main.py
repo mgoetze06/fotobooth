@@ -7,6 +7,9 @@ import cadquery as cq
 import math
 import numpy as np
 from cadquery import cqgi
+from PIL import ImageFont #pip install PILLOW
+
+
 
 #cq-editor started from conda env cadquery-editor with cq-editor --> open .py file that is loaded in pycharm --> autoreload
 
@@ -84,7 +87,20 @@ padding_points = [(60,60),(-60,-60),
                   (50,-50),
                   (-50,50),
                   (-50,-50)]
-
+def calculateStringSize(font,str):
+    str_size = font.getsize(str)
+    print(str_size)
+    str_size = (str_size[0] * 1.2, str_size[1] * 0.78)
+    print(str_size)
+    return str_size
+names_str = "Marion&Manfjred"
+bigText_str = "50ahre"
+font_size=32
+font = ImageFont.truetype("C:/Windows/Fonts/PER_____.ttf",font_size)
+names_str_size = calculateStringSize(font,names_str)
+font_size_bigText=60
+font = ImageFont.truetype("C:/Windows/Fonts/PER_____.ttf",font_size_bigText)
+bigText_str_size = calculateStringSize(font,bigText_str)
 # Create a block based on the dimensions above and add a 22mm center hole.
 # 1.  Establishes a workplane that an object can be built on.
 # 1a. Uses the X and Y origins to define the workplane, meaning that the
@@ -117,13 +133,16 @@ result_test2 = (
     .rect(base_width, base_length)
     .extrude(-base_height)
     .faces("<Z").workplane(origin=(0, -base_length/3.2, 0))
-    .text("50Jahre", 60, -10, cut=False, combine=True, font="Perpetua", kind="bold").mirror()
+    .text(bigText_str, 60, -10, cut=False, combine=True, font="Perpetua", kind="bold").mirror()
     .faces("<Z").workplane(origin=(0, base_length / 3, 0))
-    .text("Marion&Manfred", 32, -10, cut=False, combine=True, font="Perpetua", kind="bold")
+    .text(names_str, font_size, -10, cut=False, combine=True, font="Perpetua", kind="bold")
+    .faces(">Z").workplane(origin=(0, base_length / 3, 0))
+    .rect(names_str_size[0],names_str_size[1]).extrude(-2)
+    .faces(">Z").workplane(origin=(0, -base_length/3.2, 0))
+    .rect(bigText_str_size[0],bigText_str_size[1]).extrude(-2)
 )
 
 result = result_test2
-
 if debug:
     try:
         show_object(result)
