@@ -59,3 +59,21 @@ Mat source;
 Mat destination;
 
 warpPerspective(source, destination, transfo, source.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+https://github.com/eborboihuc/rotate_3d
