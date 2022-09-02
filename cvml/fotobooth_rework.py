@@ -18,12 +18,12 @@ def rescaleImage(img,w,h):
     # ratio = h / imgHeight
     imgWidth = int(imgWidth * ratio)
     imgHeight = int(imgHeight * ratio)
-    print(imgWidth, imgHeight)
+    #print(imgWidth, imgHeight)
     # pilImage = pilImage.resize((imgWidth, imgHeight), Image.ANTIALIAS)
     resized = cv2.resize(img, (imgWidth, imgHeight), interpolation=cv2.INTER_AREA)
     x_offset = int(w / 2 - imgWidth / 2)
     y_offset = int(h / 2 - imgHeight / 2)
-    print(x_offset, y_offset)
+    #print(x_offset, y_offset)
     rescaled_image[y_offset:y_offset + imgHeight, x_offset:x_offset + imgWidth] = resized
     #cv2.imwrite("resized.jpg", resized)
     return rescaled_image
@@ -35,12 +35,13 @@ class FotoboothHandler:
         self.thread = None
         self.threadImage = None
         self.img_after_newimg = 0
+        self.img_after_collage = 0
         self.stopThread = False
         self.newImg = False
         self.status = 0
         self.userinput = False
-        self.historyLenght = 5
-        self.historyImg = np.array(self.historyLenght)
+        self.historyLenght = 7
+        self.historyImg = []#np.empty(shape=(self.historyLenght,1))
 
 
     def start(self):
@@ -58,19 +59,28 @@ class FotoboothHandler:
             self.stopThread = True
             self.started = False
 
+    def mouse_click(self,event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.userinput = True
+            self.status = 2
+            print("mouse button pressed")
+
     def handleFrame(self):
         while not self.stopThread:
-            print("I'm handling myself")
+            #print("I'm handling myself")
             if self.newImg:
                 self.newImg = False
-                cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
-                cv2.setWindowProperty("window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                # cv2.imshow("window", img)
-                cv2.imshow("window", self.getFrame())
-                k = cv2.waitKey(5) & 0xFF
-                if k == ord('q'):
-                    self.stop()
-                    break;
+                if not self.userinput:
+                    cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
+                    cv2.setMouseCallback("window", self.mouse_click)
+                    cv2.setWindowProperty("window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                    # cv2.imshow("window", img)
+
+                    cv2.imshow("window", self.getFrame())
+                    k = cv2.waitKey(5) & 0xFF
+                    if k == ord('q'):
+                        self.stop()
+                        break;
             else:
                 time.sleep(0.1)
         print("done handling")
@@ -79,18 +89,21 @@ class FotoboothHandler:
         return self.frame
 
     def trackHistory(self,img):
-        for i  in range(self.historyLenght,1,-1):
-            print("index: ",i)
+        if self.historyImg == []:
+            for i in range(self.historyLenght):
+                self.historyImg.append(None)
+            #print("history init: ", self.historyImg)
+        for i in range(self.historyLenght-1,0,-1):
             if i > 0:
                 self.historyImg[i] = self.historyImg[i-1]
         self.historyImg[0] = img
-        print(self.historyImg)
+        #print(self.historyImg)
 
-        #TODO List index out of range for history image array
 
     def listImages(self):
         images = []
-        for file in os.listdir(os.getcwd()):
+        dir = os.getcwd()
+        for file in os.listdir(dir):
             if file.endswith(".jpg") or file.endswith(".JPG"):
                 images.append(file)
         #imglist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
@@ -101,27 +114,50 @@ class FotoboothHandler:
     def handleStatus(self):
         global gallery_time
         while not self.stopThread:
-            print("handling status")
+            #print("handling status")
             match self.status:
                 case 0:
                     #normal image for galleryq
                     images = self.listImages()
                     img_name = random.choice(images)
+                    while img_name in self.historyImg:
+                        img_name = random.choice(images)
                     print(img_name)
                     image = cv2.imread(img_name)
                     image = rescaleImage(image, 1920, 1080)
+                    self.img_after_collage += 1
+                    if self.img_after_collage > 4:
+                        self.img_after_collage = 0
+                        if not self.userinput:
+                            self.status = 1
+                    print("gallery image")
                 case 1:
                     #random collage if collages exist already
-                    image = cv2.imread("selection_collage.jpg")
+                    img_name = "selection_collage.jpg"
+                    print(img_name)
+                    image = cv2.imread(img_name)
+                    if not self.userinput:
+                        self.status = 0
+                    print("collage image")
                 case 2:
+                    #animate to new image
+                    image = cv2.imread("fotobooth_wait.JPG")
+                    image = rescaleImage(image, 1920, 1080)
+                    cv2.putText(image, "animate to new image", (100, 100), 1, 2, (255, 255, 255), 2)
+                    self.userinput = False
+                    self.status = 3
+                case 3:
                     #display new image
                     image = cv2.imread("test_gesicht.JPG")
                     image = rescaleImage(image, 1920, 1080)
-                    cv2.putText(image,"new image",(100,100),1,1,(255,255,255),2)
-            with lock:
-                self.frame = image
-                self.newImg = True
-                self.trackHistory(img_name)
+                    cv2.putText(image,"new image",(100,100),1,2,(255,255,255),2)
+                    self.status = 0
+
+            if not self.userinput:
+                with lock:
+                    self.frame = image
+                    self.newImg = True
+                    self.trackHistory(img_name)
             #wait for next image to be displayed
             start = time.time()
             while time.time() - start < gallery_time:
