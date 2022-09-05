@@ -385,6 +385,9 @@ def handDetection(thumbs_img,debug):
 def handDetectionHandler():
     print("detecting hands on an image")
     print("model is not preloaded!")
+
+    #TODO hier setup function einfügen, die das model lädt und an handDetection() übergibt
+
     starttime = time.time()
     detection,thumbs_img = handDetection('thumbsup.jpg',debug=False)
     print("found",len(detection), "hand(s)")
