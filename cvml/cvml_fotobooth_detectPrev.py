@@ -656,6 +656,13 @@ def classifyImageWithHandDetection(debug):
             down += 1
         cv2.circle(background,(150,540),(up+1*1),(0,255,0),50)
         cv2.circle(background, (1920-150, 540), (down+1 * 1), (0, 0, 255), 50)
+        #up_img = cv2.imread("thumbup.png",cv2.IMREAD_UNCHANGED)
+        #todo take care of alpha channel of png --> normal overlay (not black displayed)
+        up_img = cv2.imread("thumbup.png")
+        background[0:600, 0:600] = up_img
+        down_img = cv2.imread("thumbdown.png")
+        background[0:600, 1320:1920] = down_img
+
         cv2.imshow("window", background)
         cv2.waitKey(5)
 
