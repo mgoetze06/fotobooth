@@ -6,10 +6,12 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 import glob
 import math
-import gphoto2 as gp
-from testmodel import processLandmarks
+#import gphoto2 as gp
+#from testmodel import processLandmarks
 import io
 import gc
+from PIL import Image, ImageDraw
+import random
 
 def printSummary(camera):
     #camera = gp.Camera()
@@ -580,6 +582,135 @@ def previewWithDetection():
         pass
     print("camera closed")
 
+
+def placeSingleHexagon(background, img, position, dia, outline, rot):
+    # drawing a mask as a hexagon, then applying this mask to the img and pasting this img on the background
+    # dia = hex diameter
+    # rot = hex rotation (0 for flat side up, 90 for tip up)
+    # outline = drawing an outline as a factor of masksize around the hexagon (only using green at the moment)
+    # position = single tuple of (x,y)
+
+    # thumbs images from:
+    # https://www.freepik.com/vectors/thumbs-up
+
+    back = Image.open(background)
+    masksize = int(2 * dia)
+    mask = Image.new(mode="L", size=(masksize, masksize), color=(0))  # (mode = "L",
+    draw = ImageDraw.Draw(mask)
+    draw.regular_polygon(bounding_circle=((masksize / 2, masksize / 2), dia), n_sides=6, rotation=rot, fill=(255))
+    if outline > 1:
+        # f_outl = 1.06
+        f_outl = outline
+        outline_mask = Image.new(mode="L", size=(int(f_outl * masksize), int(f_outl * masksize)),
+                                 color=(0))  # (mode = "L",
+        outline_draw = ImageDraw.Draw(outline_mask)
+        outline_draw.regular_polygon(bounding_circle=((int((f_outl * masksize) / 2), int((f_outl * masksize) / 2)), f_outl * dia), n_sides=6,rotation=90, fill=(255))
+        img_outline = Image.open('green.png').resize((int(f_outl * masksize), int(f_outl * masksize))).convert("RGB")
+        back.paste(img_outline, (int(970 - f_outl * dia), int(540 - f_outl * dia)), outline_mask)
+
+    img_face = Image.open(img).resize((masksize, masksize)).convert("RGB")
+    back.paste(img_face, (int(970 - dia), int(540 - dia)), mask)
+
+    return back
+
+def classifyImageWithHandDetection(debug):
+    if debug:
+        print("prepare for classification")
+        #time.sleep(2)
+        print("classifaction starting")
+    counter = up = down = 0
+    # Load class name
+    #f = open('hand-gesture-recognition-code/gesture.names', 'r')
+    #classNames = f.read().split('\n')
+    #f.close()
+
+    #load model interpreter
+    #interpreter = tf.lite.Interpreter(model_path="handgestures.tflite")
+    #init camera
+    #camera = gp.Camera()
+    #camera.init()
+    #camera.wait_for_event(100)
+    #if debug:
+    #    printSummary(camera)
+    time.sleep(1)
+
+    #load classification image
+    try:
+        face_to_classify = random.choice(glob.glob("faces/*jpg"))
+        print(face_to_classify)
+        background = np.array(placeSingleHexagon('thumbs_background.jpg', face_to_classify, (970, 540), 400, 1.06, 90))
+        background = cv2.cvtColor(background, cv2.COLOR_BGR2RGB)
+
+    except:
+        print("something went wrong with preparing classification image")
+        print("perhaps no face to classify?")
+
+    class_time = time.time()
+
+    class_time_start = time.time()
+    class_time = 5
+    while time.time() - class_time_start < class_time:
+        if time.time() - class_time_start < 4:
+            up += 1
+        else:
+            down += 1
+        cv2.circle(background,(150,540),(up+1*1),(0,255,0),50)
+        cv2.circle(background, (1920-150, 540), (down+1 * 1), (0, 0, 255), 50)
+        cv2.imshow("window", background)
+        cv2.waitKey(5)
+
+    print(face_to_classify)
+    if up > down:
+        print("classified as good")
+        #move to good folder
+    else:
+        print("classified as bad")
+        #move to bad folder
+    # while counter < 150:
+    #     start_fps = time.time()
+    #     if not camera:
+    #         camera = gp.Camera()
+    #
+    #     image_io = getPreview(camera)
+    #     image_io.seek(0)
+    #     org_img = cv2.imdecode(np.frombuffer(image_io.read(), np.uint8), 1)
+    #     detection, thumbs_img = handDetection(org_img, debug=True, allClasses=False, interpreter=interpreter,
+    #                                           classNames=classNames,
+    #                                           isCV2Img=True)  # detection, thumbs_img = handDetection(img, debug=debug, allClasses=True, model=model, classNames=classNames)
+    #     end_fps = time.time()
+    #     fps = round(1 / (end_fps - start_fps), 2)
+    #     print(detection)
+    #     if len(detection) > 0:
+    #         if detection[0][0] == 'thumbs up':
+    #             color = (0, 255, 0)
+    #             up += 1
+    #         if detection[0][0] == 'thumbs down':
+    #             color = (0, 0, 255)
+    #             down += 1
+    #     else:
+    #         color = (255, 0, 0)
+    #     cv2.putText(thumbs_img, str(fps), (10, (40)), cv2.FONT_HERSHEY_SIMPLEX,
+    #                 1, color, 2, cv2.LINE_AA)
+    #     cv2.imshow("window", thumbs_img)
+    #     cv2.waitKey(50)
+    #     counter += 1
+    #     if counter > 10:
+    #         print("clearing")
+    #         counter = 0
+    #         gc.collect()
+    #         interpreter = tf.lite.Interpreter(model_path="handgestures.tflite")
+    #         f = open('hand-gesture-recognition-code/gesture.names', 'r')
+    #         classNames = f.read().split('\n')
+    #         f.close()
+    #
+    # try:
+    #     camera.exit()
+    #     gp.check_result(gp.gp_camera_exit(camera))
+    # except:
+    #     pass
+    # print("camera closed")
+
+
 if __name__ == '__main__':
 
     #test different resolutions on the same picture
@@ -591,5 +722,7 @@ if __name__ == '__main__':
     #handDetectionHandler("C:/projects/fotobooth/pi_tests/samples/test/56.jpg")
     #handDetectionHandler("thumb down", showImg=True)
 
-    previewWithDetection()
+    #previewWithDetection()
+
+    classifyImageWithHandDetection(True)
 
