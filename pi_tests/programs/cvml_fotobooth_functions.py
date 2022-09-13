@@ -3,9 +3,55 @@ import numpy as np
 import time
 import mediapipe as mp
 import tensorflow as tf
-#from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model
+import glob
 import math
-from testmodel import processLandmarks
+import os.path
+
+pi_Used = False
+
+if pi_Used:
+    import gphoto2 as gp
+    from testmodel import processLandmarks
+
+
+def printSummary(camera):
+    #camera = gp.Camera()
+    #camera.init()
+    #camera.wait_for_event(100)
+    camera.get_config()
+    text = camera.get_summary()
+    print('Summary')
+    print('=======')
+    print(str(text))
+    #camera.exit()
+
+
+def takePhoto(camera):
+    #camera = gp.Camera()
+    #camera.init()
+    print('Capturing image')
+    file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
+    print('Camera file path: {0}/{1}'.format(file_path.folder, file_path.name))
+    target = os.path.join('.', file_path.name)
+    print('Copying image to', target)
+    camera_file = camera.file_get(file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
+    camera_file.save(target)
+    #camera.exit()
+
+def getPreview(cam):
+    a = time.time()
+    camera_file = gp.check_result(gp.gp_camera_capture_preview(cam))
+    file_data = gp.check_result(gp.gp_file_get_data_and_size(camera_file))
+    #data = memoryview(file_data)
+    gp.check_result(gp.gp_camera_exit(camera))
+    #camera.capture(gp.GP_CAPTURE_IMAGE)
+    image_io = io.BytesIO(file_data)
+    #image = Image.open(image_io)
+    #print(image.size)
+    b = time.time()
+    print("processed preview in %s ms"%(b-a))
+    return image_io
 
 def rescaleImage(img,w,h):
     rescaled_image = np.zeros((h, w, 3), np.uint8)
@@ -165,7 +211,6 @@ def eval_glassesClassifier(show):
     pics_processed = 0
     fastest = 100
     no_success = []
-    diff = 0
     for i in range(len(resolutions)):
         if i > 0:
             # print(resolutions[i][0])
@@ -173,8 +218,8 @@ def eval_glassesClassifier(show):
             show_only_max_confidence = True
             start = time.time()
             glasses_classifier = cv2.CascadeClassifier(
-                r"big_glasses_classifier_5.xml")
-            im_gray, reducer, org_img = readImg("test_gesicht2.JPG", resolutions[i][0])
+                r"C:/projects/fotobooth/data/gui_trainer/big_glasses_classifier_5.xml")
+            im_gray, reducer, org_img = readImg("C:/projects/fotobooth/data/rohdaten/pos/im9.JPG", resolutions[i][0])
             # for i in range(2):
             face_boxes, rejectLevels, levelWeights = detectOnImg(im_gray, 1.8, 5, glasses_classifier)
             if len(levelWeights) > 0:
@@ -203,10 +248,10 @@ def eval_glassesClassifier(show):
     print("######################################")
     print("test results:")
 
-    print("totaltime: \t\t\t",endtime-starttime)
+    print("totaltime: \t\t\t\t",endtime-starttime)
     print("pics with success: \t\t", pics_processed)
     print("avail. pics: \t\t\t", len(resolutions) - 1)
-    print("average time per pic: \t\t", total_time / pics_processed)
+    print("average time per pic: \t", total_time / pics_processed)
     print("average fps: \t\t\t", 1 / (total_time / pics_processed))
     print("fastest res: \t\t\t", winner, fastest)
     print("no success on res: \t\t", no_success)
@@ -245,7 +290,7 @@ def eval_facesClassifier(show):
             show_only_max_confidence = False
             start = time.time()
             face_cas = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            im_gray, reducer, org_img = readImg("test_gesicht3.JPG", resolutions[i][0])
+            im_gray, reducer, org_img = readImg("C:/projects/fotobooth/cvml/test_gesicht3.JPG", resolutions[i][0])
             # for i in range(2):
             face_boxes, rejectLevels, levelWeights = detectOnImg(im_gray,1.1, 15, face_cas)
             if len(levelWeights) > 0:
@@ -282,37 +327,37 @@ def eval_facesClassifier(show):
     print()
     print("######################################")
     print("test results:")
-    print("totaltime: \t\t",endtime-starttime)
-    print("pics with success: \t",pics_processed,"/",len(resolutions) - 1)
+    print("totaltime: \t\t\t\t",endtime-starttime)
+    print("pics with success: \t\t",pics_processed,"/",len(resolutions) - 1)
     print("average time per pic: \t", total_time / (pics_processed+incorrect_detection))
-    print("average fps: \t\t", 1 / (total_time / (pics_processed+incorrect_detection)))
-    print("fastest res: \t\t", winner, fastest)
-    print("no success on res: \t", no_success)
+    print("average fps: \t\t\t", 1 / (total_time / (pics_processed+incorrect_detection)))
+    print("fastest res: \t\t\t", winner, fastest)
+    print("no success on res: \t\t", no_success)
     print("incorrect detections: \t",incorrect_detection,"/",len(resolutions) - 1)
     print("######################################")
 
-def handDetection(thumbs_img,debug):
+def handDetection(thumbs_img,debug,allClasses,classNames,interpreter,isCV2Img):
+    global pi_Used
+
     mpHands = mp.solutions.hands
-    print(mpHands)
-    #hands = mpHands.Hands(max_num_hands=2, min_detection_confidence=0.8)
-    hands = mpHands.Hands(static_image_mode=True,max_num_hands=2, min_detection_confidence=0.4)
-    #hands = mpHands.Hands()
-    print(hands)
+    ##hands = mpHands.Hands(max_num_hands=2, min_detection_confidence=0.8)
+    hands = mpHands.Hands(static_image_mode=True,max_num_hands=2, min_detection_confidence=0.6)
     mpDraw = mp.solutions.drawing_utils
-    print(mpDraw)
-    print("mediapipe init done")
     # Load the gesture recognizer model
-    
-    #model = load_model('/home/pi/cvml/programs/hand-gesture-recognition-code/mp_hand_gesture')
-    
+    if not pi_Used:
+        model = load_model('hand-gesture-recognition-code\mp_hand_gesture')
     #model = load_model('mp_hand_gesture')
     # Load class name
-    f = open('/home/pi/cvml/programs/hand-gesture-recognition-code/gesture.names', 'r')
-    classNames = f.read().split('\n')
-    f.close()
+    #f = open('hand-gesture-recognition-code\gesture.names', 'r')
+    #classNames = f.read().split('\n')
+    #f.close()
     if debug:
         print(classNames)
-    thumbs_img = cv2.imread(thumbs_img)
+        verbose = 1
+    else:
+        verbose = 0
+    if not isCV2Img:
+        thumbs_img = cv2.imread(thumbs_img)
     # thumbs_img = cv2.imread('thumbsup.jpg')
     # thumbs_img = cv2.imread('thumbsdown.jpg')
     # thumbs_img = cv2.imread('thumbsdown.jpg')
@@ -323,7 +368,7 @@ def handDetection(thumbs_img,debug):
         print(thumbs_img.shape)
     #reduce_factor = 6
     #thumbs_img = cv2.resize(thumbs_img, (int(w_org / reduce_factor), int(h_org / reduce_factor)))
-    thumbs_img = cv2.resize(thumbs_img, (600,400))
+    thumbs_img = cv2.resize(thumbs_img, (700,500))
 
     # thumbs_img = cv2.GaussianBlur(thumbs_img, (5,5), 0)
     framergb = cv2.cvtColor(thumbs_img, cv2.COLOR_BGR2RGB)
@@ -337,20 +382,23 @@ def handDetection(thumbs_img,debug):
         print(framergb.shape)
 
     # Get hand landmark prediction
-    print("mediapipe processing frame")
     result = hands.process(framergb)
-    #print(result.multi_hand_landmarks)
     className = ''
     # post process the result
     if result.multi_hand_landmarks:
-        print("found hand landmarks")
+        if debug:
+            print("found hand landmarks")
         landmarks_pred = []
         landmarks_draw = []
         shape = thumbs_img.shape
         for handslms in result.multi_hand_landmarks:
             for lm in handslms.landmark:
-                lmx = int(lm.x * x)
-                lmy = int(lm.y * y)
+                if pi_Used:
+                    lmx = np.float32(lm.x * x)
+                    lmy = np.float32(lm.y * y)
+                else:
+                    lmx = int(lm.x * x)
+                    lmy = int(lm.y * y)
                 landmarks_pred.append([lmx, lmy])
                 landmarks_draw.append([lm.x * shape[1], lm.y * shape[0]])
                 cv2.circle(thumbs_img, (int((lmx / x) * y), int((lmy / y) * x)), 15, (255, 0, 0))
@@ -361,55 +409,214 @@ def handDetection(thumbs_img,debug):
     # Predict gesture in Hand Gesture Recognition project
     outarray = []
     if result.multi_hand_landmarks:
-        print("found landmarks")
+        if debug:
+            print("found landmarks")
+            print(len(landmarks_pred) // 21)
         for i in range(len(landmarks_pred) // 21):
             # predict hand class with model
-            prediction = processLandmarks([landmarks_pred[i * 21:(21 + (i * 21))]])
-            #prediction = model.predict([landmarks_pred[i * 21:(21 + (i * 21))]])
+            if pi_Used:
+                prediction = processLandmarks([landmarks_pred[i * 21:(21 + (i * 21))]],interpreter=interpreter)
+            else:
+                prediction = model.predict([landmarks_pred[i * 21:(21 + (i * 21))]],verbose=verbose)
             # prediction = model.predict([landmarks_pred[0:21]])
             # --> landmarks sind dann doppelt so lang wie sie für eine hand sein müssten
             pred = prediction.flatten()
-            classID = np.argmax(pred[0:len(pred) - 1])  # ignore smile
-            className = classNames[classID]
-            sorted_ind = np.unravel_index(np.argsort(pred.ravel()),pred.shape)
-            second_classID = sorted_ind[0][-2]
-            if debug:
-                print(prediction)
-                print(pred)
-                print(pred[classID])
-                print("model prediction: %s" % className)
-                print(second_classID)
-                print("second largest pred: ",classNames[second_classID])
-                print(int(landmarks_draw[i * 21][0]),int(landmarks_draw[i * 21][1]))
-            #first prediction
-            cv2.putText(thumbs_img, className, (int(landmarks_draw[4+i * 21][0]),int(landmarks_draw[4+i * 21][1]-30)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2,cv2.LINE_AA)
-            cv2.putText(thumbs_img, str(round(pred[classID],4)), (int(landmarks_draw[4+i * 21][0]+10),int(landmarks_draw[4+i * 21][1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1,cv2.LINE_AA)
-            #second prediction
-            cv2.putText(thumbs_img, classNames[second_classID], (int(landmarks_draw[4+i * 21][0]),int(landmarks_draw[4+i * 21][1]-90)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 55), 1,cv2.LINE_AA)
-            cv2.putText(thumbs_img, str(round(pred[second_classID],4)), (int(landmarks_draw[4+i * 21][0]+10),int(landmarks_draw[4+i * 21][1]-75)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 55), 1,cv2.LINE_AA)
-            outarray.append([className,str(round(pred[classID],4)),classNames[second_classID],str(round(pred[second_classID],4))])
+            if allClasses:
+                #get the model output and take top 2 predictions
+                classID = np.argmax(pred[0:len(pred) - 1])  # ignore smile
+                className = classNames[classID]
+                sorted_ind = np.unravel_index(np.argsort(pred.ravel()),pred.shape)
+                second_classID = sorted_ind[0][-2]
+                if debug:
+                    print(prediction)
+                    print(pred)
+                    print(pred[classID])
+                    print("model prediction: %s" % className)
+                    print(second_classID)
+                    print("second largest pred: ",classNames[second_classID])
+                    print(int(landmarks_draw[i * 21][0]),int(landmarks_draw[i * 21][1]))
+                #first prediction
+                cv2.putText(thumbs_img, className, (int(landmarks_draw[4+i * 21][0]),int(landmarks_draw[4+i * 21][1]-30)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2,cv2.LINE_AA)
+                cv2.putText(thumbs_img, str(round(pred[classID],4)), (int(landmarks_draw[4+i * 21][0]+10),int(landmarks_draw[4+i * 21][1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1,cv2.LINE_AA)
+                #second prediction
+                cv2.putText(thumbs_img, classNames[second_classID], (int(landmarks_draw[4+i * 21][0]),int(landmarks_draw[4+i * 21][1]-90)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 55), 1,cv2.LINE_AA)
+                cv2.putText(thumbs_img, str(round(pred[second_classID],4)), (int(landmarks_draw[4+i * 21][0]+10),int(landmarks_draw[4+i * 21][1]-75)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 55), 1,cv2.LINE_AA)
+                outarray.append([className,str(round(pred[classID],4)),classNames[second_classID],str(round(pred[second_classID],4))])
+            else:
+                #get model ouput but only compare thumbs up and thumbs down
+                #output[2] --> thumbs up
+                #output[3] --> thumbs down
+                thumbs_up = pred[2]
+                thumbs_down = pred[3]
+                thumbs_threshold = 0.0001
+                if debug:
+                    print(pred)
+                    print("thumbs up: ", thumbs_up)
+                    print("thumbs down: ", thumbs_down)
+                #noHands = False
+                if thumbs_up < thumbs_threshold and thumbs_down < thumbs_threshold:
+                    if debug:
+                        print("no thumbs found")
+                    #noHands = True
+                else:
+                    #if not noHands:
+                    if thumbs_up > thumbs_down:
+                        className = "thumbs up"
+                        drawValue = thumbs_up
+                    else:
+                        className = "thumbs down"
+                        drawValue = thumbs_down
+                    outarray.append([className, str(round(drawValue, 4))])
+                    cv2.putText(thumbs_img, className, (int(landmarks_draw[4 + i * 21][0]), int(landmarks_draw[4 + i * 21][1] - 30)),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+                    cv2.putText(thumbs_img, str(round(drawValue, 4)),(int(landmarks_draw[4 + i * 21][0] + 10), int(landmarks_draw[4 + i * 21][1] - 10)),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+
         #cv2.imshow("window", thumbs_img)
         #cv2.waitKey()
     else:
-        
-        #if debug:
-        print("no hand landmarks in img")
+        if debug:
+            print("no hand landmarks in img")
 
     return outarray,thumbs_img
 
-def handDetectionHandler():
-    print("detecting hands on an image")
-    print("model is not preloaded!")
-    #TODO hier setup function einfügen, die das model lädt und an handDetection() übergibt
+def handDetectionHandler(img,showImg):
+    global pi_Used
+    if showImg:
+        debug = True
+    else:
+        debug = False
+    #model = load_model('hand-gesture-recognition-code\mp_hand_gesture')
 
-    starttime = time.time()
-    detection,thumbs_img = handDetection('thumbsdown.jpg',debug=True)
-    print("found",len(detection), "hand(s)")
-    print(detection)
-    cv2.imshow("window", thumbs_img)
-    endtime = time.time()
-    print("detection time: ",endtime -starttime)
-    cv2.waitKey()
+    # Load class name
+    f = open('hand-gesture-recognition-code/gesture.names', 'r')
+    classNames = f.read().split('\n')
+    f.close()
+    if pi_Used:
+        interpreter = tf.lite.Interpreter(model_path="handgestures.tflite")
+    else:
+        interpreter = None
+    if img.endswith(".jpg"):
+        print("single image")
+        print("detecting hands on an image")
+        print("model is not preloaded!")
+
+        #TODO hier setup function einfügen, die das model lädt und an handDetection() übergibt
+
+        starttime = time.time()
+        #C:\projects\fotobooth\pi_tests\samples\other
+        #detection, thumbs_img = handDetection(img, debug=debug, allClasses=True, model=model, classNames=classNames)
+        detection, thumbs_img = handDetection(img, debug=debug, allClasses=True, interpreter=interpreter,classNames=classNames,isCV2Img=False)        #detection, thumbs_img = handDetection(img, debug=debug, allClasses=True, model=model, classNames=classNames)
+        #detection,thumbs_img = handDetection('thumbsup2.jpg',debug=True,allClasses=False)
+        print("found",len(detection), "hand(s)")
+        print(detection)
+        endtime = time.time()
+        print("detection time: ", endtime - starttime)
+        if showImg:
+            cv2.imshow("window", thumbs_img)
+            cv2.waitKey()
+    else:
+        print("is a path")
+        files = []
+        for file in glob.glob(img + "/*.jpg"):
+            # get all dxf files from current directory
+            files.append(file)
+        processedFiles = []
+        try:
+            with open("files.txt", 'r') as f:
+                for t in f.readlines():
+                    #print(t)
+                    processedFiles.append(t)
+                f.close()
+        except:
+            pass
+
+        result = []
+        if not os.path.exists('test.npy'):
+            result.append(["detectiontime [s]", "filename", "number of detected hands", "predicted label", "label prob","true label"])
+        avg_time = 0
+
+        for file in files:
+            print(file.split("\\"))
+            if pi_Used:
+                filename = file.split("/")[1]
+                truelabel = filename.split("_")[0]
+            else:
+                filename = file.split("\\")[1]
+                truelabel = filename.split("_")[0]
+            print(filename)
+            found = False
+            for f in processedFiles:
+                if filename == f.split("\n")[0]:
+                    print("already there")
+                    found = True
+                    break
+            if not found:
+                #newfilename = "test1"
+                processedFiles.append(filename + "\n")
+               # print(filename)
+               # print("added to processed files array")
+                #print(processedFiles)
+            else:
+                continue
+            img = cv2.imread(file)
+            starttime = time.time()
+            #detection, thumbs_img = handDetection(file, debug=debug, allClasses=True, model=model, classNames=classNames)
+            detection, thumbs_img = handDetection(img, debug=debug, allClasses=True,interpreter=interpreter,classNames=classNames,isCV2Img=True)        #detection, thumbs_img = handDetection(img, debug=debug, allClasses=True, model=model, classNames=classNames)
+            endtime = time.time()
+
+
+            #print(detection)
+            if len(detection) == 0:
+                detection = [["nothing found", "1.0"]]
+            res_obj = [str(round(endtime -starttime,3)),filename,len(detection),detection[0][0],detection[0][1],truelabel]
+            avg_time += (endtime -starttime)
+            #for d in detection:
+            #    res_obj.append(d)
+            result.append(res_obj)
+            print("detection time: ",endtime -starttime)
+            if showImg:
+                cv2.imshow("window", thumbs_img)
+                cv2.waitKey()
+        for res in result: print(res)
+
+        f = open("files.txt", 'w+')
+        for p in processedFiles:
+            print(p)
+            f.write(p)
+            # f.write("\n")
+        f.close()
+        if os.path.exists('test.npy'):
+            print("array is there")
+            with open('test.npy', 'rb') as f:
+                temp = np.load(f)
+                print(temp)
+                result = np.append(temp,result,axis=0)
+                f.close()
+        with open('test.npy', 'wb') as f:
+            np.save(f, result)
+            f.close()
+        print("avg time: ", avg_time/len(result))
+
+def previewWithDetection():
+    counter = 0
+    # Load class name
+    f = open('hand-gesture-recognition-code/gesture.names', 'r')
+    classNames = f.read().split('\n')
+    f.close()
+    interpreter = tf.lite.Interpreter(model_path="handgestures.tflite")
+    camera = gp.Camera()
+    camera.init()
+    camera.wait_for_event(100)
+
+    printSummary(camera)
+    time.sleep(2)
+    while counter < 5:
+        image,image_io = getPreview(camera)
+        image_io.seek(0)
+        org_img = cv2.imdecode(np.frombuffer(image_io.read(), np.uint8), 1)
+        detection, thumbs_img = handDetection(org_img, debug=False, allClasses=False, interpreter=interpreter,classNames=classNames,isCV2Img=True)  # detection, thumbs_img = handDetection(img, debug=debug, allClasses=True, model=model, classNames=classNames)
+        cv2.imshow("window", thumbs_img)
+        cv2.waitKey()
+        counter += 1
 
 if __name__ == '__main__':
 
@@ -418,7 +625,12 @@ if __name__ == '__main__':
     #eval_facesClassifier(show=False)
 
     #test hand detection
-    handDetectionHandler()
+    #handDetectionHandler("C:/projects/fotobooth/pi_tests/samples/test",showImg=True)
 
+    handDetectionHandler("C:/projects/fotobooth/cvml/pi_metrics_test/pctest", showImg=False)
 
+    #handDetectionHandler("C:/projects/fotobooth/pi_tests/samples/test/56.jpg")
+    #handDetectionHandler("thumb down", showImg=True)
+
+    #previewWithDetection()
 
