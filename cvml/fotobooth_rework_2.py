@@ -52,19 +52,25 @@ def trackHistory(img):
             historyImg[i] = historyImg[i-1]
     historyImg[0] = img
 
-def mouse_click(event, x, y, flags, param):
-    global status
-    name = "[########## mouse click]: "
 
-    if event == cv2.EVENT_LBUTTONDOWN:
-        print(name + "status before mouseclick " + str(status))
-        status = 2
-        #newImg = False
-        print(name +"mouse button pressed")
-        print(name +"status after mouseclick " + str(status))
-def handleFrame(event,fotobooth):
+def handleFrame(event,fotobooth,mouse_clicked):
     global cv2windowinit
+    #mouse_clicked_bool = False
 
+    def mouse_click(event, x, y, flags, param):
+        global mouse_clicked_bool
+        name = "[########## mouse click]: "
+        #mouse_clicked_bool = False
+        print(name,mouse_clicked.is_set)
+        if event == cv2.EVENT_LBUTTONDOWN:
+            # print(name + "status before mouseclick " + str(status))
+            # status = 2
+            mouse_clicked.set()
+            # newImg = False
+            #mouse_clicked_bool = True
+            print(name + "mouse button pressed")
+            # print(name +"status after mouseclick " + str(status))
+# mouse_clicked_bool
     while True:
     #while not self.stopThread:
         #print("I'm handling myself")
@@ -75,10 +81,11 @@ def handleFrame(event,fotobooth):
             if not cv2windowinit:
                 cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
                 cv2.moveWindow("window", 40, 30)
-                cv2.setMouseCallback("window", mouse_click)
+                cv2.setMouseCallback("window", mouse_click, param=(mouse_clicked))
                 cv2.setWindowProperty("window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 cv2windowinit = True
             # cv2.imshow("window", img)
+            #print("[process] value of mouseCallback: ",mouse_clicked_bool)
             img = fotobooth.getFrame()
             path = fotobooth.getFramePath()
             print("[process] recieved image path: ",path)
@@ -128,6 +135,7 @@ def handleStatus():
                 image = cv2.imread("fotobooth_wait.JPG")
                 image = rescaleImage(image, 1920, 1080)
                 cv2.putText(image, "animate to new image", (100, 100), 1, 2, (255, 255, 255), 2)
+                mouse_clicked.clear()
                 status = 3
         elif status == 3:
                 print("new image")
@@ -156,6 +164,9 @@ def handleStatus():
 
         start = time.time()
         while time.time() - start < gallery_time:
+            if mouse_clicked.is_set():
+                status = 2
+                break
             #if self.stopThread:
             #    return
             #if self.userinput:
@@ -228,10 +239,14 @@ lock = Lock()
 img_after_collage = 0
 status = 0
 
+
+
 #fotobooth = FotoboothHandler()
 
 if __name__ == '__main__':
     new_image_to_display = multiprocessing.Event()
+    mouse_clicked = multiprocessing.Event()
+
 
     BaseManager.register('FotoboothHandler', FotoboothHandler)
     manager = BaseManager()
@@ -243,18 +258,16 @@ if __name__ == '__main__':
     fotobooth.setFrame(cv2.imread(firstimage),firstimage)
 
 
-    process_handle_frame = multiprocessing.Process(name='process_handle_frame', target=handleFrame, args=(new_image_to_display,fotobooth))  #handle new frame
+    process_handle_frame = multiprocessing.Process(name='process_handle_frame', target=handleFrame, args=(new_image_to_display,fotobooth,mouse_clicked))  #handle new frame
     process_handle_frame.daemon = True
     process_handle_frame.start()
 
 
 
-
-
     while True:
         handleStatus()
-        #if cv2windowinit:
-        #    status = 0
+        print("main:")
+        print(mouse_clicked.is_set())
     #fotobooth.getNextImage(True)
     #time.sleep(2)
     #fotobooth.getNextImage(False)
