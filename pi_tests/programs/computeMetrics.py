@@ -5,7 +5,9 @@ from sklearn import metrics
 if not os.path.exists('test.npy'):
     print("no array found")
     exit
-with open('C:/Users/Maurice/Desktop/test.npy', 'rb') as f:
+
+with open('C:/projects/fotobooth/cvml/pi_metrics_test/pi_metrics_hands1_conf0_4_allclasses_with_zoom.npy', 'rb') as f:
+#with open('C:/Users/Maurice/Desktop/statichandsTrue_thresh-1_validation.npy', 'rb') as f:
     a = np.load(f)
 print(a)
 labels = []
@@ -43,3 +45,4 @@ print(metrics.confusion_matrix(labels, pred))
 print(metrics.classification_report(labels, pred))
 
 print(np.mean(time))
+print("average fps: ",round(1/np.mean(time),3))
