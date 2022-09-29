@@ -1,7 +1,7 @@
 # Fotobooth
 Fotobooth is a python script running on a raspberry pi, controlling a Canon DSLR 1000D through gphoto2. Users can trigger the camera through a footswitch.
 
-<img src="https://github.com/mgoetze06/fotobooth/blob/main/overview.png?raw=true" width="75%">
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/overview.png?raw=true" width="100%">
 <img src="https://github.com/mgoetze06/fotobooth/blob/main/1.jpg?raw=true" width="50%">
 
 ![CAD](/cad/) Files for the background lights and nerdfacts sign can be found [here](/cad/).
@@ -21,7 +21,7 @@ The cvml-project consists of two seperate parts:
 ## Mediapipe hand detection
 The project uses the mediapipe framework from google to detect hand landmarks on an image. It returns an 1x21x2 Array containing the position of finger joints and finger tips in the image.
 
-<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_mediapipe.png?raw=true" width="75%">
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_mediapipe.png?raw=true" width="15%">
 
 ## Tensorflow Gesture Recognition
 The landmarks that were detected by mediapipe are processed by a tensorflow lite model to recognize the gestures "thumbs up" and "thumbs down". The model was found on the blog:
@@ -31,7 +31,7 @@ and was converted from saved_model.pb to handgestures.tflite using the Tensorflo
 
 > https://www.tensorflow.org/lite/models/convert/convert_models#python_api
 
-<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_tensorflow.jpg?raw=true" width="75%">
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_tensorflow.jpg?raw=true" width="15%">
 
 <img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/handgestures.gif?raw=true" width="75%">
 
@@ -43,6 +43,13 @@ While giving acceptable results on normal images without any accessories, the re
 Therefore a custom cascade classifier was trained to detect the "Big Glasses" in images. The application to train the classifier is:
 
 > https://amin-ahmadi.com/cascade-trainer-gui/
+
+
+The following image of big glasses was detected with [big_glasses_classifier_5](/cvml/big_glasses_classifier_5.xml).
+
+> sample resolution 150x150 <br/>
+> max_scale = 1.2 <br/>
+> min_neigh = 5 <br/>
 
 <img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/big_glasses_detection.png?raw=true" width="75%">
 
