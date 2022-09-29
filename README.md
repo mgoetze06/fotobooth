@@ -15,13 +15,13 @@ The fotobooth was part of an educational project at the Leipzig University of Ap
 >https://pypi.org/project/opencv-python/
 
 The cvml-project consists of two seperate parts:
-1) hand detection and recognition
-2) face (and object) detection
+1) hand detection and gesture recognition (mediapipe + tensorflow lite)
+2) face (and object) detection (opencv cascade classifier)
 
 ## Mediapipe hand detection
 The project uses the mediapipe framework from google to detect hand landmarks on an image. It returns an 1x21x2 Array containing the position of finger joints and finger tips in the image.
 
-MEDIAPIPE LINK TO THUMBS UP
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_mediapipe.png?raw=true" width="75%">
 
 ## Tensorflow Gesture Recognition
 The landmarks that were detected by mediapipe are processed by a tensorflow lite model to recognize the gestures "thumbs up" and "thumbs down". The model was found on the blog:
@@ -31,7 +31,9 @@ and was converted from saved_model.pb to handgestures.tflite using the Tensorflo
 
 > https://www.tensorflow.org/lite/models/convert/convert_models#python_api
 
-TENSORFLOW LINK TO handdetection
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_tensorflow.jpg?raw=true" width="75%">
+
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/handgestures.gif?raw=true" width="75%">
 
 ## Face and Object Detection with Cascade Classifier
 To postprocess the images taken in the fotobooth a cascade classifier was used to detect faces in images.
@@ -41,6 +43,9 @@ While giving acceptable results on normal images without any accessories, the re
 Therefore a custom cascade classifier was trained to detect the "Big Glasses" in images. The application to train the classifier is:
 
 > https://amin-ahmadi.com/cascade-trainer-gui/
+
+<img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/big_glasses_detection.png?raw=true" width="75%">
+
 
 
 
