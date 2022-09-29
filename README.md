@@ -21,6 +21,8 @@ The cvml-project consists of two seperate parts:
 ## Mediapipe hand detection
 The project uses the mediapipe framework from google to detect hand landmarks on an image. It returns an 1x21x2 Array containing the position of finger joints and finger tips in the image.
 
+> https://google.github.io/mediapipe/solutions/hands.html
+
 <img src="https://github.com/mgoetze06/fotobooth/blob/main/cvml/results/thumbup_mediapipe.png?raw=true" width="30%">
 
 ## Tensorflow Gesture Recognition
