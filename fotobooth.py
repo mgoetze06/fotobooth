@@ -156,6 +156,30 @@ def update_gallery(e): #collage process
                     image = Image.open("/home/pi/programs/countdown/stripes.png") #overlay the png with stripes and logo on top of 2x2 collage
                     new_img.paste(image, (0,0), image) #second image is for alpha channel in foreground
                 if mode == 1: #3 images on the right, left is place for logo or individual photo 
+                    new_img = Image.open("/home/pi/programs/countdown/OverlayMitBild.jpg")
+                    new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
+                    ims = []
+                    stackedrows = 3
+                    thumbnail_height = round(scr_h/stackedrows)
+                    for i in range(0,stackedrows):
+                        filename = folder + "/" + random.choice(imglist)
+                        while filename == folder + "/collages":
+                            filename = folder + "/" + random.choice(imglist)
+                        image = Image.open(filename)
+                        #print(str(image.width),str(image.height),str(image.height/image.width))
+                        sizefactor = scr_h/image.height
+                        thumbnail_width = round((image.width * sizefactor)/stackedrows)
+                        image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS) #resize to new image size
+                        ims.append(image)
+                    i = 0
+                    x = round(((scr_w*2)/3)-thumbnail_width/4)
+                    y = 0
+                    for i in range(0,stackedrows):
+                        new_img.paste(ims[i], (x,y))
+                        y += thumbnail_height
+                    
+                if mode == 2: #3 images on the right, left is place for logo or individual photo
+                    #3 stacked photos with logo on the left
                     new_img = Image.open("/home/pi/programs/countdown/overlay.jpg")
                     new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
                     ims = []
@@ -194,10 +218,10 @@ def update_gallery(e): #collage process
                     
                 new_img.save(name,'JPEG')
                 collagenumber += 1
-                mode += 1
-                if mode > 1:
+                #mode += 1
+                if mode > 2:
                     mode = 0
-                time.sleep(120)
+                time.sleep(60)
             
             
            #e.clear()
@@ -206,34 +230,73 @@ def update_gallery(e): #collage process
 def timerfunc(e):      #timer for updating oled display and gallery on main display
     while True:#e is animation finished
         gallerytime = 4     #time between new photos are shown on main display
-        multiplikator = 3   #gallerytime * multiplikator = time elapsed before oled display gets updated
-        
+        multiplikator = 2   #gallerytime * multiplikator = time elapsed before oled display gets updated
+        start_fresh = False
         start = time.time()
         end = time.time()
         
         for i in range(multiplikator - 1):  #run the timer 3 times to 5s before oled gets updated
             while(end - start)<(gallerytime *(i+1)):
-                time.sleep(0.5)
+                time.sleep(0.1)
                 if photo_taken_event.is_set() or first_button_pushed.is_set() or animation_finished.is_set():
-                        time.sleep(15)
+                        print("timerfunc is going to sleep")
+                        time.sleep(10)
+                        print("timerfunc woke up")
+                        start_fresh = True
+                        break
                 end = time.time()
             if not e.is_set() and not first_button_pushed.is_set():
                 gallery_update_event.set()     #set here and clear event in gallery process
-        oled_update_event.set()            #set here and clear event in oled process
+        if not start_fresh:
+            oled_update_event.set()            #set here and clear event in oled process
 
 
 
 def take_photo(e):
-    nr = 1
+    #nr = 1
+    def subprocess_return(p,output,error):
+        print(p.returncode)
+        print(output)
+        print(error)
+        if p.returncode == 0:
+           print("return code ok", output)
+           #print('%r is found in %s: %r' % (pattern, filename, output))
+        elif p.returncode == 1:
+           print("return code 1", output)
+           #print('%r is NOT found in %s: %r' % (pattern, filename, output))
+        else:
+           #assert p.returncode > 1
+           print('error occurred: %r' % (error,))
     while True:
         if e.is_set():
             print('take photo...')
             subprocess.Popen(["pkill", "-f", "gphoto2"])
-            subprocess.Popen(["gphoto2","--set-config","capturetarget=1"])
-            time.sleep(0.2)
-            p1 = subprocess.Popen(["gphoto2", "--capture-image-and-download","--filename","/home/pi/programs/newimage/new.jpg","--keep","--force-overwrite"])
+            p2 = subprocess.Popen(["gphoto2","--set-config","capturetarget=1"])
+            output, error = p2.communicate()
+            tries = 1
+            while not error == None and tries < 5:
+                p2 = subprocess.Popen(["gphoto2","--set-config","capturetarget=1"])
+                output, error = p2.communicate()
+                tries += 1
+            subprocess_return(p2,output,error)
+            p2.wait()
+            #time.sleep(0.3)
+            directory = "/home/pi/programs/images/"
+            folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
+            now = datetime.now()
+            newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
+            print("this is newname: ")
+            print(newname)
+            p1 = subprocess.Popen(["gphoto2", "--capture-image-and-download","--filename",newname,"--keep","--force-overwrite"])
             #p1 = subprocess.Popen(["gphoto2", "--capture-image-and-download","--filename","/home/pi/programs/images/new.jpg","--force-overwrite"])
             #time.sleep(1)
+            output, error = p1.communicate()
+            subprocess_return(p1,output,error)
+            tries = 1
+            while not error == None and tries < 5:
+                p1 = subprocess.Popen(["gphoto2","--set-config","capturetarget=1"])
+                output, error = p2.communicate()
+                tries += 1
             p1.wait()
             first_button_pushed.clear()
             e.clear()
@@ -243,8 +306,8 @@ def take_photo(e):
               # ^ this idiom means "we won't be using this value"
                 #files += len(filenames)
                 #folders += len(dirnames)
-            directory = "/home/pi/programs/images/"
-            folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
+            #directory = "/home/pi/programs/images/"
+            #folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
             #if nr < 10:
             #    newname = folder + "/IMG-000" + str(nr) + ".jpg"
             #else:
@@ -255,12 +318,12 @@ def take_photo(e):
             #            newname = folder + "/IMG-0" + str(nr) + ".jpg"
             #        else:
             #            newname = folder + "/IMG-" + str(nr) + ".jpg"
-            now = datetime.now()
-            newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
-            print("this is newname bevore copying: ")
-            print(newname)
-            shutil.copy("/home/pi/programs/newimage/new.jpg", newname)
-            nr += 1
+            #now = datetime.now()
+            #newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
+            #print("this is newname bevore copying: ")
+            #print(newname)
+            #shutil.copy("/home/pi/programs/newimage/new.jpg", newname)
+            #nr += 1
 
 
 def led_countdown(e): #e is first button pushed
@@ -269,6 +332,45 @@ def led_countdown(e): #e is first button pushed
     offset_idle = 0 #offset for idle animation
     old_color = 0x0
     new_color = 0x1
+    old_ring = True
+    def wheel(pos):
+        if pos < 0 or pos > 255:
+            r = g = b = 0
+        elif pos < 85:
+            r = int(pos * 3)
+            g = int(255 - pos * 3)
+            b = 0
+        elif pos < 170:
+            pos -= 85
+            r = int(255 - pos * 3)
+            g = 0
+            b = int(pos * 3)
+        else:
+            pos -= 170
+            r = 0
+            g = int(pos * 3)
+            b = int(255 - pos * 3)
+            
+        r = "{:02x}".format(r) 
+        g = "{:02x}".format(g) 
+        b = "{:02x}".format(b)
+        combined = "0x"+r+g+b
+        hex_int = int(combined, 16)
+        #print(hex_int)
+        return hex_int
+
+    def rainbow_cycle(wait):
+        for j in range(255):
+            for i in range(LED_COUNT):
+                pixel_index = (i * 256 // LED_COUNT) + j
+                #pixels[i] = wheel(pixel_index & 255)
+                color = wheel(pixel_index & 255)
+                ws.ws2811_led_set(channel, i, color)
+                resp = ws.ws2811_render(leds)
+                
+            #pixels.write()
+            time.sleep(wait)
+    
     while True:
         while e.is_set() and not animation_finished.is_set():
             print('animating countdown leds ...')
@@ -299,23 +401,26 @@ def led_countdown(e): #e is first button pushed
             
         if not photo_taken_event.is_set() and not e.is_set() and not animation_finished.is_set(): #led animation for idle
             #print("led idle, should animate")
-            new_color = DOT_COLORS[iteration]
-            for i in range(LED_COUNT):
-                if i < offset_idle:
-                    color = new_color
-                else:
-                    color = old_color
-                ws.ws2811_led_set(channel, i, color)
-                resp = ws.ws2811_render(leds)
-            offset_idle += 1
-            time.sleep(0.03)
-            if offset_idle == LED_COUNT + 1:
-                iteration += 1
-                offset_idle = 0
-                #offsetidle = random.randint(0,23)
-                old_color = new_color
-            if iteration == len(DOT_COLORS):
-                iteration = 0
+            if old_ring:
+                new_color = DOT_COLORS[iteration]
+                for i in range(LED_COUNT):
+                    if i < offset_idle:
+                        color = new_color
+                    else:
+                        color = old_color
+                    ws.ws2811_led_set(channel, i, color)
+                    resp = ws.ws2811_render(leds)
+                offset_idle += 1
+                time.sleep(0.01)
+                if offset_idle == LED_COUNT + 1:
+                    iteration += 1
+                    offset_idle = 0
+                    #offsetidle = random.randint(0,23)
+                    old_color = new_color
+                if iteration == len(DOT_COLORS):
+                    iteration = 0
+            else:
+                rainbow_cycle(0.0000001)
             
 
 
@@ -393,16 +498,19 @@ if __name__ == '__main__':
         first_button_pushed.set()
     # GPIO callbacks
     def but2_callback(channel):
+        
+        ##just for testin
+        
         print('backup button pushed')
-        GPIO.output(led_pin,1)
-        ledcounter = 0
-        for ledcounter in range (10):
-            GPIO.output(led_pin,1)
-            time.sleep(0.25)
-            GPIO.output(led_pin,0)
-            time.sleep(0.25)
-        print('backing up now')
-        subprocess.call("/home/pi/programs/usbbackup/backup.sh")    
+        #GPIO.output(led_pin,1)
+        #ledcounter = 0
+        #for ledcounter in range (10):
+        #    GPIO.output(led_pin,1)
+        #    time.sleep(0.25)
+        #    GPIO.output(led_pin,0)
+        #    time.sleep(0.25)
+        print('test: backing up now')
+        #subprocess.call("/home/pi/programs/usbbackup/backup.sh")    
         #start bash script to backup/copy data here
         
         #start bash
@@ -438,20 +546,29 @@ if __name__ == '__main__':
     process_led_count.daemon = True
     process_led_count.start()
     
-    directory = "/home/pi/programs/images/"
-    folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
+    #directory = "/home/pi/programs/images/"
+    #folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
     imglist = []
+    show_last_two_photos = False
+    lastfile = "asldfas"
     def listImages():
         global imglist
+        global folder
         os.chdir(folder)
-        imglist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
+        #imglist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
+        imglist = [f for f in os.listdir(os.getcwd()) if os.path.isfile(os.path.join(folder, f))]
+        if len(imglist)>1:
+            imglist = sorted(imglist, key=os.path.getmtime)
+        #print("listimages: ",imglist)
         #oldest = files[0]
         #newest = files[-1]
     
     
-    def randImg(pics_displayed):
+    def randImg(pics_displayed,show_last_two_photos_local,lastfile):
         global imglist
-        lastfile = "asldfas"
+        global show_last_two_photos
+        global folder
+        #global lastfile
         listImages()
         collagelist = []
         if imglist == []:
@@ -459,31 +576,116 @@ if __name__ == '__main__':
             myimage = "/home/pi/programs/countdown/picwait.jpg"
         else:
             if pics_displayed == 4 and os.path.exists(folder + "/collages/"):
+                #display Collage
                 print("displaying collage")
                 os.chdir(folder + "/collages/")
                 collagelist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
                 myimage = random.choice(collagelist)
                 print(myimage)
-            else:    
-                myimage = random.choice(imglist)
-                while (myimage == lastfile) or (myimage == "collages"):
-                    #myimage = random.choice(os.listdir(self.imagepath))
+                
+            else:
+                if pics_displayed < 3  and len(imglist) > 2 and show_last_two_photos == True:
+                    #display last two images
+                    print("displaying gallery after new foto")
+                    #if len(imglist) > 2:
+                        
+                    index = (-1 * (pics_displayed + 1)) - 1
+                    print(index)
+                    if index > -4:
+                        myimage = imglist[index]
+                        while(myimage == "collages"):
+                            #myimage = random.choice(os.listdir(self.imagepath))
+                            index -= 1
+                            myimage = imglist[index]
+                            print(myimage)
+                    else:
+                        myimage = imglist[-1]
+                        show_last_two_photos = False
+                    myimage = folder + "/" + myimage
+                    print(myimage)
+                    #else:
+                        
+                else:
+                    #random image
                     myimage = random.choice(imglist)
                     
-                    print("myimage in while loop")
+                    while (myimage == lastfile) or (myimage == "collages"):
+                        #myimage = random.choice(os.listdir(self.imagepath))
+                        myimage = random.choice(imglist)
+
+                    lastfile = myimage
+                    myimage = folder + "/" + myimage
+                    print("random image")
                     print(myimage)
-                lastfile = myimage
-                myimage = folder + "/" + myimage
-                print(myimage)
+                    print(show_last_two_photos)
+                    show_last_two_photos = False
         return myimage
     
+
     def newImg():
-        #global imglist
-        #listImages()
-        #myimage = imglist[-1]
-        myimage = "/home/pi/programs/newimage/new.jpg"
+        global imglist
+        debug = True
+        listImages()
+        myimage = imglist[-1]
+        
+        now = datetime.now()
+        if debug:
+            print("now: ",now)
+            print(myimage)
+        image_date = myimage.split("IMG-")[1].split(".jpg")[0]
+        image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
+        if debug:
+            print("image: ",image_date_astime)
+        
+        while (now - image_date_astime).total_seconds() > 15:
+            if debug:
+                print((now - image_date_astime).total_seconds())
+                print("image too old")
+            time.sleep(0.5)
+            listImages()
+            myimage = imglist[-1]
+            
+            now = datetime.now()
+            if debug:
+                print("now: ",now)
+            image_date = myimage.split("IMG-")[1].split(".jpg")[0]
+            image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
+            if debug:
+                print("image: ",image_date_astime)
+
+        
+        #newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
+        
+        #myimage = "/home/pi/programs/newimage/new.jpg"
         print(myimage)
         return myimage
+    
+    def checkAndCreateFolder(parent_path,new_folder):
+        if not parent_path.endswith("/"):
+            parent_path = parent_path + "/"
+        folder_to_check = parent_path + new_folder
+        if os.path.exists(folder_to_check):
+            print(parent_path + " contains " + new_folder +" already.")
+        else:
+            print(parent_path + " does not contain " + new_folder)
+            os.makedirs(folder_to_check)
+            print("directory " + new_folder + " created.")
+        print(os.listdir(folder_to_check))
+        folders = [name for name in os.listdir(folder_to_check) if os.path.isdir(os.path.join(folder_to_check, name))]
+        folders = len(folders)
+        #files = folders = 0
+        #for _, dirnames, filenames in os.walk(folder_to_check):
+        #  # ^ this idiom means "we won't be using this value"
+        #    files += len(filenames)
+        #    folders += len(dirnames)
+        print("amount of folders")
+        print(folders)
+        folder = "/home/pi/programs/images/folder" + str(folders + 1)
+        while os.path.exists(folder):
+            folders += 1
+            folder = "/home/pi/programs/images/folder" + str(folders)
+        os.makedirs(folder)
+        return folder
     
     root = tk.Tk()
     w, h = root.winfo_screenwidth(), root.winfo_screenheight()
@@ -503,18 +705,10 @@ if __name__ == '__main__':
     canvas.configure(background='black')
     #root.overrideredirect(True)
     root.update()
-    files = folders = 0
-    for _, dirnames, filenames in os.walk("/home/pi/programs/images/"):
-      # ^ this idiom means "we won't be using this value"
-        files += len(filenames)
-        folders += len(dirnames)
-    print("amount of folders")
-    print(folders)
-    folder = "/home/pi/programs/images/folder" + str(folders + 1)
-    while os.path.exists(folder):
-        folders += 1
-        folder = "/home/pi/programs/images/folder" + str(folders)
-    os.makedirs(folder)
+    
+    #create new folder 
+    folder = checkAndCreateFolder("/home/pi/programs","images")
+    print(folder)
     #shutil.copy("/home/pi/programs/images/fendt.jpeg", folder+"/fendt.jpeg")
     #imagepath = "/home/pi/programs/images/test.jpg"
     picwait_displayed = False
@@ -526,15 +720,20 @@ if __name__ == '__main__':
             imagechanged = True
             gallery_update_event.clear()
             picwait_displayed = False
+            pics_displayed = 0
+            show_last_two_photos = True #flag to show last two photos
         else:
             if first_button_pushed.is_set() and not picwait_displayed == True:
                 imagepath = "/home/pi/programs/countdown/picwait.jpg"
                 imagechanged = True
+                show_last_two_photos = True #flag to show last two photos
                 picwait_displayed = True
                 print("picwait")
             else:
                 if gallery_update_event.is_set():
-                    imagepath = randImg(pics_displayed)
+                    print("updating gallery")
+                    imagepath = randImg(pics_displayed,show_last_two_photos,lastfile)
+                    lastfile = imagepath
                     imagechanged = True
                     pics_displayed += 1
                     if pics_displayed == 5:
@@ -543,7 +742,11 @@ if __name__ == '__main__':
                 else:
                     imagechanged = False
         if imagechanged == True:
-            pilImage = Image.open(imagepath)
+            try:
+                pilImage = Image.open(imagepath)
+            except:
+                imagepath = randImg(1,False)
+                pilImage = Image.open(imagepath)
             imgWidth, imgHeight = pilImage.size
             if imgWidth > w or imgHeight > h:
                 ratio = min(w/imgWidth, h/imgHeight)
