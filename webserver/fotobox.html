@@ -1,0 +1,205 @@
+<html>
+<head>
+    <title>Mauricis Fotobox</title>
+    <link rel="stylesheet" href="Style.css" />
+</head>
+
+<body class="body">
+    <div class="header-div">
+        <h1>Fotobooth Webserver</h1>
+        <hr>
+    </div>
+
+    <div class="main-div">
+
+        <!-- Manual Control -->
+        <div class="div-content-box">
+
+            <h2>General Control</h2>
+
+            <!-- Start/Stopp -->
+            <div class="div-content">
+
+                <h3>Start Script</h3>
+
+                <div class="section">
+                    <code>.script_to_run.py</code>
+
+                    <form class="form" action="/" method="POST">
+                        <div class="div-spacer">
+                            <input class="button" id="enable" type="submit" name="disable" value="Enable">
+
+                            <input class="button" id="disable" type="submit" name="enable" value="Disable">
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+            <!-- Seconds to run -->
+            <div class="div-content">
+                    <h3>Seconds to run moter</h3>
+
+                <div class="section">
+
+                    <form action="/" method="POST">
+
+                        <div class="div-slidercontrol">
+                            <label for="secondsName">Current Duration:  <b>%s s</b></label><br>
+                            <input class="label" type="submit" name="secondsName" value="1" oninput="this.form.amountRangeSeconds.value=this.value">
+                        </div>
+
+                        <input class="slider" type="range" name="amountRangeSeconds" min="1" max="10" value="1" oninput="this.form.secondsName.value=this.value"/>
+
+                    </form>
+
+                </div>
+            </div>
+
+            <h2>Data Overview</h2>
+
+            <!-- Sensor Data -->
+            <div class="div-content">
+
+                <h3>Sensor data</h3>
+
+                <div class="section">
+
+                    <div class="div-spacer-sensor">
+                        <p>Encoder M1: </p>
+                        <p>%S</p>
+                    </div>
+
+                    <div class="div-spacer-sensor">
+                        <p>Encoder M2: </p>
+                        <p>%S</p>
+                    </div>
+
+                    <div class="div-spacer-sensor">
+                        <p>Encoder M3: </p>
+                        <p>%S</p>
+                    </div>
+
+                    <div class="div-spacer-sensor">
+                        <p>Motor Current M1: </p>
+                        <p>%S</p>
+                    </div>
+
+                    <div class="div-spacer-sensor">
+                        <p>Motor Current M2: </p>
+                        <p>%S</p>
+                    </div>
+
+
+                    <div class="div-spacer-sensor">
+                        <p>Motor Current M3: </p>
+                        <p>%S</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Manual Control -->
+        <div class="div-content-box">
+
+            <h2>Manual Control</h2>
+
+            <!-- Overall motor speed -->
+            <div class="div-content">
+                <h3>Overall motor speed</h3>
+
+                <div class="section">
+                    <form action="/" method="POST">
+
+                        <div class="div-slidercontrol">
+                            <label id="label-motorspeed" for="motorspeed">Current Speed:  <b>%s</b></label><br>
+                            <input class="label" type="submit" name="motorspeed" value="1" oninput="this.form.amountRangeMotorspeed.value=this.value">
+                        </div>
+
+                        <input class="slider" type="range" name="amountRangeMotorspeed" min="1" max="100" value="1" oninput="this.form.motorspeed.value=this.value"/>
+                        <!--<input type="number" name="amountInput" min="1" max="100" value="1" oninput="this.form.amountRangeMotorspeed.value=this.value" />-->
+                    </form>
+                </div>
+            </div>
+
+            <!-- Individual Motor Control -->
+            <div class="div-content">
+                <h3>Individual Motor Control</h3>
+
+                <div class="section">
+
+                    <form action="/" method="POST">
+
+                        <div class="div-motorcontrol">
+                            <p class="label-headline">Motor 1</p>
+                            <img src="Resources/arrow-right-solid.svg" class="arrow-left">
+                            <input class="label" type="submit" name="submit" value="M1_left">
+                            <input class="label" type="submit" name="submit" value="M1_right">
+                            <img src="Resources/arrow-right-solid.svg" class="arrow-right">
+                        </div>
+
+                        <div class="div-motorcontrol">
+                            <p class="label-headline">Motor 2</p>
+
+                            <img src="Resources/arrow-right-solid.svg" class="arrow-left">
+                            <input class="label" type="submit" name="submit" value="M2_left">
+
+                            <input class="label" type="submit" name="submit" value="M2_right">
+                            <img src="Resources/arrow-right-solid.svg" class="arrow-right">
+                        </div>
+
+                        <div class="div-motorcontrol">
+                            <p class="label-headline">Motor 3</p>
+
+                            <img src="Resources/arrow-right-solid.svg" class="arrow-left">
+                            <input class="label" type="submit" name="submit" value="M3_left">
+
+                            <input class="label" type="submit" name="submit" value="M3_right">
+                            <img src="Resources/arrow-right-solid.svg" class="arrow-right">
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- Motor Control from Coordination Plane -->
+            <div class="div-content">
+
+                <h3>Motor Control from Coordination Plane</h3>
+
+                <div class="section">
+                    <form action="/" method="POST">
+                        <div class="div-button">
+                            <input class="button" type="submit" name="submit" value="X-Y">
+                            <input class="button" type="submit" name="submit" value="Y">
+                            <input class="button" type="submit" name="submit" value="XY">
+                        </div>
+
+                        <div class="div-button">
+                            <input class="button" type="submit" name="submit" value="X-">
+                            <input class="button" type="submit" name="submit" value="    ">
+                            <input class="button" type="submit" name="submit" value="X">
+                        </div>
+
+                        <div class="div-button">
+                            <input class="button" type="submit" name="submit" value="X-Y-">
+                            <input class="button" type="submit" name="submit" value="Y-">
+                            <input class="button" type="submit" name="submit" value="XY-">
+                        </div>
+
+                        <div class="div-button">
+                            <input class="button" type="submit" name="submit" value="rot">
+                            <input class="button" type="submit" name="submit" value="rot-">
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</body>
+</html>
