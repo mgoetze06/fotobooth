@@ -1,0 +1,160 @@
+.body
+{
+    padding-left: 5%;
+    padding-right: 5%;
+    margin: auto;
+    font-family: Arial;
+
+}
+
+.header-div {
+    padding-top: 20px;
+}
+
+.main-div {
+    display: flex;
+    padding-top: 0px;
+}
+
+.div-content-box {
+    flex-basis: 50%;
+    horiz-align: center;
+}
+
+.div-content {
+    border-radius: 15px;
+    padding: 5px;
+}
+
+.section {
+    border-radius: 20px;
+    padding: 1.0rem;
+    background-color: #F5F5F5;
+}
+
+.div-spacer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+
+.div-spacer-sensor {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.input{
+    height: 50px;
+    align-content: center;
+    border: transparent;
+    border-radius: 25px;
+}
+
+#display-button {
+    width: 50px;
+}
+
+.label {
+    border-color: transparent;
+    background-color: lightgray;
+    border-radius: 15px;
+    height: 40px;
+    padding-left: 5%;
+    padding-right: 5%;
+    font-weight: bold;
+    text-decoration-color: white;
+}
+
+.div-slidercontrol{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+#label-motorspeed {
+    vertical-align: center;
+}
+
+.label-headline {
+    horiz-align: center;
+    padding-left: 20px;
+}
+
+.div-motorcontrol {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+#disable {
+    background-color: lightcoral;
+    width: 60%;
+}
+
+#enable {
+    background-color: lightgreen;
+    width: 30%;
+}
+
+
+.form {
+    padding: 10px;
+    align-content: center;
+}
+
+.slider {
+    align-content: center;
+    display: block;
+    width: 100%;
+}
+
+.button {
+    width: 50%;
+    margin: 1%;
+    height: 40px;
+    border: transparent;
+    background-color: lightgray;
+    border-radius: 20px;
+}
+
+.div-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+
+.arrow-left {
+    width: 20px;
+    height: 20px;
+    rotate: 180deg;
+}
+
+.arrow-right {
+    width: 20px;
+    height: 20px;
+}
+
+@media screen and (max-width: 767px) {
+    .main-div {
+        display: block;
+    }
+
+    .div-content-box {
+        flex-basis: unset;
+    }
+}
+
+
+@media screen and (min-width: 767px) {
+    .div-content {
+        width: 80%;
+    }
+}
