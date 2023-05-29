@@ -11,6 +11,7 @@ import os
 #import numpy as np
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread, Event, Lock
+import mimetypes
 from time import sleep, time
 import subprocess
 
@@ -28,12 +29,52 @@ threadStarted = False
 mythread = Thread()
 event = Event()
 
+with open("fotobox.html", "r", encoding='utf-8') as f:
+    html = f.read()
+
 class MyServer(BaseHTTPRequestHandler):
 
     def do_HEAD(self):
+
+        # Validate request path, and set type
+        print(self.path)
+        path = "fotobox.html"
+        try:
+            ending = self.path.split(".")
+            ending = ending[1]
+        except:
+            ending = None
+        path = self.path
+        if ending == "html":
+            print("serving html")
+            type = "text/html"
+            path = "." + path
+        elif ending == "css":
+            print("serving css")
+            type = "text/css"
+            path = "." + path
+        elif ending == "svg":
+            print("serving svg")
+            type = "image/svg+xml"
+            path = "." + path
+        else:
+            # Wild-card/default
+            if not ending == "/":
+                print("UNRECONGIZED REQUEST: ", path)
+                path = "fotobox.html"
+
+
+            type = "text/html"
+
+        # Set header with content type
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
+        self.send_header("Content-type", type)
         self.end_headers()
+
+        # Open the file, read bytes, serve
+
+        with open(path, 'rb') as file:
+            self.wfile.write(file.read())  # Send
 
     def _redirect(self, path):
         self.send_response(303)
@@ -44,100 +85,9 @@ class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         global scale
-        html = '''
-           <html>
-           <title>Fotobooth Webserver</title>
-           <body 
-            style="width:960px; margin: 20px auto;">
-           <h1>Fotobooth Webserver</h1>
-           <p>Program to control Fotobooth from webserver </p>
-           <div style="width: 800px; float:left;">
-           <div style="width: 400px; float:left;">
-            <h3>Start Script ".script_to_run.py"</h3>
-            <form action="/" method="POST">
-                <input type="submit" name="enable" value="enable">
-                <input type="submit" name="enable" value="disable">
-            </form>
-            </div>
-           <pre>
-           .
-           .
-           .
-           .
-           </pre>
-           </div>
-           <div style="width: 800px; float:left;">
-           <h2>Manual Control</h2>
-           </div>
-           <h3>Seconds to run </h3>
-            <form action="/" method="POST">
-              <label for="secondsName">Seconds to run motor :</label><br>
-              <label for="secondsName">Current Duration:  <b>%s s</b></label><br>
-                <input type="submit" name="secondsName" value="1" oninput="this.form.amountRangeSeconds.value=this.value">
-                <input type="range" name="amountRangeSeconds" min="1" max="10" value="1" oninput="this.form.secondsName.value=this.value"/>
-            </form>
-            <div style="width: 800px; float:left;">
-            <div style="width: 400px; float:left;">
-            <h3>Overall motor speed</h3>
-            <form action="/" method="POST">
-              <label for="motorspeed">Motor Speed (1 - 100):</label><br>
-              <label for="motorspeed">Current Speed:  <b>%s</b></label><br>
-                <input type="submit" name="motorspeed" value="1" oninput="this.form.amountRangeMotorspeed.value=this.value">
-                <input type="range" name="amountRangeMotorspeed" min="1" max="100" value="1" oninput="this.form.motorspeed.value=this.value"/>
-                <!--<input type="number" name="amountInput" min="1" max="100" value="1" oninput="this.form.amountRangeMotorspeed.value=this.value" />-->
-            </form>
-            </div>
-            
-            </div>
-            <div style="width: 800px; float:left;">
-            <div style="width: 400px; float:left;">
-            <h3>Individual Motor Control</h3>
-            <form action="/" method="POST">
-
-               Motor 1:
-               <input type="submit" name="submit" value="M1_left">
-               <input type="submit" name="submit" value="M1_right"><br>
-                Motor 2:
-               <input type="submit" name="submit" value="M2_left">
-               <input type="submit" name="submit" value="M2_right"><br>
-                Motor 3:
-               <input type="submit" name="submit" value="M3_left">
-               <input type="submit" name="submit" value="M3_right"><br>
-               </form>
-            </div>
-            <div style="width: 400px; float:left;">
-            <h3>Motor Control from Coordination Plane</h3>
-           <form action="/" method="POST">
-               <input type="submit" name="submit" value="X-Y">
-               <input type="submit" name="submit" value="Y">
-               <input type="submit" name="submit" value="XY"><br>
-               <input type="submit" name="submit" value="X-">
-               <input type="submit" name="submit" value="    ">
-               <input type="submit" name="submit" value="X"><br>
-               <input type="submit" name="submit" value="X-Y-">
-               <input type="submit" name="submit" value="Y-">
-               <input type="submit" name="submit" value="XY-"><br>
-               <br>
-               <input type="submit" name="submit" value="rot">
-               <input type="submit" name="submit" value="rot-">
-           </form>
-           </div>
-           </div>
-           <div style="width: 800px; float:left;">
-           <h2>Sensor data</h2>
-            <div style="width: 400px; float:left;">
-           Encoder M1: %s<br>Encoder M2: %s<br>Encoder M3: %s<br>
-           </div>    
-           <div style="width: 400px; float:left;">
-           Motor Current M1: %s<br>Motor Current M2: %s<br>Motor Current M3: %s<br>
-           </div>      
-           </div>          
-           </body>
-           </html>
-        ''' % (str(2),str(2),"test","test","test","test","test","test")
-        #temp = getTemperature()
+        global html
         self.do_HEAD()
-        #self.wfile.write(html.format(str(scale)).encode("utf-8"))
+        ##self.wfile.write(html.format(str(scale)).encode("utf-8"))
         #print(html)
         self.wfile.write(html.encode("utf-8"))
 
