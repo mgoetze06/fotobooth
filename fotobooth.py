@@ -109,7 +109,7 @@ def update_oled(e):
         if iteration == 6:
             iteration = 0
 def detectFaces():
-
+    print("detecting faces")
     
 def update_gallery(e): #collage process
     iteration = 0
