@@ -9,6 +9,7 @@ from luma.core.render import canvas
 from luma.oled.device import sh1106
 import _rpi_ws281x as ws
 import subprocess
+from subprocess import check_output
 import psutil
 from gpiozero import CPUTemperature
 from datetime import datetime
@@ -47,9 +48,12 @@ def update_oled(e):
     iteration = 0
     photo_count = 0
     updated = False
+    print("updating oled process started. Waiting for update events")
+
     with open('/home/pi/programs/log_backup.txt', 'r') as f:
         lastbackup = f.read()
         f.close()
+
     while True:
         if animation_finished.is_set() and updated == False:
             photo_count += 1
@@ -66,7 +70,7 @@ def update_oled(e):
             print("update oled")
             with canvas(device) as draw:
                     draw.rectangle(device.bounding_box, outline="white", fill="black")
-                    if iteration == 0:
+                    if iteration == 5:
                         
                         draw.text((10, 4), "heute aufgenommen: ", fill=1)
                         draw.text((50, 26), str(photo_count), fill=1) #(horizontal von links, vertikal von oben)
@@ -92,10 +96,16 @@ def update_oled(e):
                         draw.text((20, 40), str(disk_total) +" GB", fill=1) 
                     if iteration == 4:
                         draw.text((10, 4), "Last Backup: ", fill=1)
-                        draw.text((10, 26), lastbackup, fill=1) 
+                        draw.text((10, 26), lastbackup, fill=1)
+                    if iteration == 0:
+                        
+                        ssid = subprocess.check_output(['iwgetid']).decode()
+                        ip = check_output(['hostname', '-I'])
+                        draw.text((10, 4), ssid, fill=1)
+                        draw.text((10, 26), ip, fill=1) 
             e.clear()
             iteration += 1
-        if iteration == 5:
+        if iteration == 6:
             iteration = 0
         
     
@@ -301,6 +311,8 @@ def take_photo(e):
             first_button_pushed.clear()
             e.clear()
             photo_taken_event.set()
+            #oled_update_event.set()            #set here and clear event in oled process
+
             #files = folders = 0
             #for _, dirnames, filenames in os.walk("/home/pi/programs/images/"):
               # ^ this idiom means "we won't be using this value"
@@ -478,10 +490,10 @@ if __name__ == '__main__':
     serial = i2c(port=1, address=0x3C)
     # substitute ssd1331(...) or sh1106(...) below if using that device
     device = sh1106(serial)
-    with canvas(device) as draw:
-            draw.rectangle(device.bounding_box, outline="white", fill="black")
-            draw.text((4, 4), "Setup; Last Backup:", fill=1)
-            draw.text((4,30), lastbackup, fill=1)
+    #with canvas(device) as draw:
+    #        draw.rectangle(device.bounding_box, outline="white", fill="black")
+    #        draw.text((4, 4), "Setup; Last Backup:", fill=1)
+    #        draw.text((4,30), lastbackup, fill=1)
 
     first_button_pushed = multiprocessing.Event()
     animation_finished = multiprocessing.Event()
