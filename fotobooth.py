@@ -13,6 +13,7 @@ from subprocess import check_output
 import psutil
 from gpiozero import CPUTemperature
 from datetime import datetime
+import cv2
 
 
 LED_CHANNEL    = 0
@@ -107,7 +108,8 @@ def update_oled(e):
             iteration += 1
         if iteration == 6:
             iteration = 0
-        
+def detectFaces():
+
     
 def update_gallery(e): #collage process
     iteration = 0
