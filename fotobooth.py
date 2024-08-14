@@ -636,41 +636,47 @@ if __name__ == '__main__':
 
     def newImg():
         global imglist
-        debug = True
-        listImages()
-        myimage = imglist[-1]
-        
-        now = datetime.now()
-        if debug:
-            print("now: ",now)
-            print(myimage)
-        image_date = myimage.split("IMG-")[1].split(".jpg")[0]
-        image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
-        if debug:
-            print("image: ",image_date_astime)
-        
-        while (now - image_date_astime).total_seconds() > 15:
-            if debug:
-                print((now - image_date_astime).total_seconds())
-                print("image too old")
-            time.sleep(0.5)
+        try:
+            debug = True
             listImages()
             myimage = imglist[-1]
             
             now = datetime.now()
             if debug:
                 print("now: ",now)
+                print(myimage)
             image_date = myimage.split("IMG-")[1].split(".jpg")[0]
             image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
             if debug:
                 print("image: ",image_date_astime)
+            
+            while (now - image_date_astime).total_seconds() > 15:
+                if debug:
+                    print((now - image_date_astime).total_seconds())
+                    print("image too old")
+                time.sleep(0.5)
+                listImages()
+                myimage = imglist[-1]
+                
+                now = datetime.now()
+                if debug:
+                    print("now: ",now)
+                image_date = myimage.split("IMG-")[1].split(".jpg")[0]
+                image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
+                if debug:
+                    print("image: ",image_date_astime)
 
-        
-        #newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
-        
-        #myimage = "/home/pi/programs/newimage/new.jpg"
-        print(myimage)
-        return myimage
+            
+            #newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
+            
+            #myimage = "/home/pi/programs/newimage/new.jpg"
+            print(myimage)
+            return myimage
+        except:
+            print("Fetching new Image failed.")
+            print("Returning Wait-Image.")
+            return "/home/pi/programs/countdown/picwait.jpg"
+
     
     def checkAndCreateFolder(parent_path,new_folder):
         if not parent_path.endswith("/"):
