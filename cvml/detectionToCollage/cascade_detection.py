@@ -142,12 +142,14 @@ def drawBoxOnOrigImg(org_img,reduce_factor,ver_boxes,draw_rectangle):
     print("drawing on original image completed")
     return org_img
 
-def cascadeClassifierHandler(img_path,classifier_path):
+def cascadeClassifierHandler(img_path,classifier):
     score_val = 4.2
     show_only_max_confidence = False
     #classifier = cv2.CascadeClassifier(r"big_glasses_classifier_5.xml")
-    classifier = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    im_gray, reducer, org_img = readImg("test_gesicht3.JPG", (1296,862))
+    #classifier = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    classifier = cv2.CascadeClassifier(classifier)
+
+    im_gray, reducer, org_img = readImg(img_path, (1296,862))
     # for i in range(2):
     face_boxes, rejectLevels, levelWeights = detectOnImg(im_gray, 1.01, 15, classifier)
     if len(levelWeights) > 0:
