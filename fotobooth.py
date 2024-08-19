@@ -168,7 +168,7 @@ def update_gallery(e): #collage process
                     image = Image.open("/home/pi/programs/countdown/stripes.png") #overlay the png with stripes and logo on top of 2x2 collage
                     new_img.paste(image, (0,0), image) #second image is for alpha channel in foreground
                 if mode == 1: #3 images on the right, left is place for logo or individual photo 
-                    new_img = Image.open("/home/pi/programs/countdown/OverlayMitBild.jpg")
+                    new_img = Image.open("/home/pi/programs/countdown/overlay2.png")
                     new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
                     ims = []
                     stackedrows = 3
@@ -724,12 +724,13 @@ if __name__ == '__main__':
         if(timediff_minutes > 60*12):
             folder = "/home/pi/programs/images/folder" + str(folders + 1)
             print("old folder. need to create new one: ", folder)
+            while os.path.exists(folder):
+                folders += 1
+                folder = "/home/pi/programs/images/folder" + str(folders)
+            os.makedirs(folder)
         else:
             print("folder is not old enough. reuse folder: ", folder)
-        while os.path.exists(folder):
-            folders += 1
-            folder = "/home/pi/programs/images/folder" + str(folders)
-        os.makedirs(folder)
+
         return folder
     
     root = tk.Tk()
