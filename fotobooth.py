@@ -134,85 +134,42 @@ def update_gallery(e): #collage process
                 imglist = os.listdir(os.getcwd())
                 #print("now i create a collage")
                 scr_w,scr_h = 1920,1080
-                if mode == 0:
-                    #print("full 2x2 collage without overlay")
-                    #overlay the png with stripes and logo on top of 2x2 collage
-                    cols = 2 #for full mode
-                    rows = 2
-                    new_img = Image.open("/home/pi/programs/countdown/overlay.jpg")
-                    new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
-                    ims = []
-                    thumbnail_height = round(scr_h/rows)
-                    for i in range(0,4):
+                #print("full 2x2 collage without overlay")
+                #overlay the png with stripes and logo on top of 2x2 collage
+                cols = 2 #for full mode
+                rows = 2
+                new_img = Image.open("/home/pi/programs/countdown/overlay.jpg")
+                new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
+                ims = []
+                thumbnail_height = round(scr_h/rows)
+                currentUsedPhotosInCollageList = []
+                for i in range(0,4):
+                    filename = folder + "/" + random.choice(imglist)
+                    while (filename == folder + "/collages") or (filename in currentUsedPhotosInCollageList):
                         filename = folder + "/" + random.choice(imglist)
-                        while filename == folder + "/collages":
-                            filename = folder + "/" + random.choice(imglist)
-                        image = Image.open(filename)
 
-                        sizefactor = scr_h/image.height
-                        thumbnail_width = round((image.width * sizefactor)/cols)
-                        image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS) #resize to new image size
-                        ims.append(image)
-                
-                    i = 0
-                    x = round((scr_w/cols)-thumbnail_width)
-                    y = round((scr_h/rows)-thumbnail_height)
-                    for col in range(cols):
-                        for row in range(rows):
-                            #print(i,x,y)
-                            new_img.paste(ims[i], (x,y))
-                            i += 1
-                            y += thumbnail_height
-                        x += thumbnail_width
-                        y = 0
-                    image = Image.open("/home/pi/programs/countdown/stripes.png") #overlay the png with stripes and logo on top of 2x2 collage
-                    new_img.paste(image, (0,0), image) #second image is for alpha channel in foreground
-                if mode == 1: #3 images on the right, left is place for logo or individual photo 
-                    new_img = Image.open("/home/pi/programs/countdown/overlay2.png")
-                    new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
-                    ims = []
-                    stackedrows = 3
-                    thumbnail_height = round(scr_h/stackedrows)
-                    for i in range(0,stackedrows):
-                        filename = folder + "/" + random.choice(imglist)
-                        while filename == folder + "/collages":
-                            filename = folder + "/" + random.choice(imglist)
-                        image = Image.open(filename)
-                        #print(str(image.width),str(image.height),str(image.height/image.width))
-                        sizefactor = scr_h/image.height
-                        thumbnail_width = round((image.width * sizefactor)/stackedrows)
-                        image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS) #resize to new image size
-                        ims.append(image)
-                    i = 0
-                    x = round(((scr_w*2)/3)-thumbnail_width/4)
-                    y = 0
-                    for i in range(0,stackedrows):
+                    currentUsedPhotosInCollageList.append(filename)
+                    image = Image.open(filename)
+
+                    sizefactor = scr_h/image.height
+                    thumbnail_width = round((image.width * sizefactor)/cols)
+                    image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS) #resize to new image size
+                    ims.append(image)
+            
+                i = 0
+                x = round((scr_w/cols)-thumbnail_width)
+                y = round((scr_h/rows)-thumbnail_height)
+                for col in range(cols):
+                    for row in range(rows):
+                        #print(i,x,y)
                         new_img.paste(ims[i], (x,y))
+                        i += 1
                         y += thumbnail_height
-                    
-                if mode == 2: #3 images on the right, left is place for logo or individual photo
-                    #3 stacked photos with logo on the left
-                    new_img = Image.open("/home/pi/programs/countdown/overlay.jpg")
-                    new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
-                    ims = []
-                    stackedrows = 3
-                    thumbnail_height = round(scr_h/stackedrows)
-                    for i in range(0,stackedrows):
-                        filename = folder + "/" + random.choice(imglist)
-                        while filename == folder + "/collages":
-                            filename = folder + "/" + random.choice(imglist)
-                        image = Image.open(filename)
-                        #print(str(image.width),str(image.height),str(image.height/image.width))
-                        sizefactor = scr_h/image.height
-                        thumbnail_width = round((image.width * sizefactor)/stackedrows)
-                        image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS) #resize to new image size
-                        ims.append(image)
-                    i = 0
-                    x = round(((scr_w*2)/3)-thumbnail_width/4)
+                    x += thumbnail_width
                     y = 0
-                    for i in range(0,stackedrows):
-                        new_img.paste(ims[i], (x,y))
-                        y += thumbnail_height
+                image = Image.open("/home/pi/programs/countdown/stripes.png") #overlay the png with stripes and logo on top of 2x2 collage
+                new_img.paste(image, (0,0), image) #second image is for alpha channel in foreground
+
                     
                 if not os.path.exists(folder + "/collages/"):
                     os.makedirs(folder + "/collages/")
