@@ -1,5 +1,42 @@
 <html>
+    <script>
+        let colorPicker;
+        const defaultColor = "#0000ff";
+
+        window.addEventListener("load", startup, false);
+
+        function startup() {
+        colorPicker = document.querySelector("#color-picker");
+        //colorPicker.value = defaultColor;
+        colorPicker.addEventListener("input", updateFirst, false);
+        colorPicker.addEventListener("change", updateAll, false);
+        colorPicker.select();
+        }
+        function updateFirst(event) {
+            const p = document.querySelector("body");
+            if (p) {
+                p.style.background = event.target.value;
+            }
+        }
+
+        function updateAll(event) {
+            document.querySelectorAll("p").forEach((p) => {
+                p.style.color = event.target.value;
+            });
+        }
+
+
+    </script>
 <body>
 Test
+<form method="post">
+    <label for="first_name">First name:</label><br>
+    <input type="text" id="first_name" name="first_name" value="John"><br>
+    <label for="last_name">Last name:</label><br>
+    <input type="text" id="last_name" name="last_name" value="Doe"><br><br>
+    <label for="color-picker">Select your favorite color:</label>
+    <input type="color" id="color-picker" name="color-picker" value="#ff0000"/>
+    <input type="submit" value="Submit">
+  </form> 
 </body>
 </html>
