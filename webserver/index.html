@@ -28,6 +28,10 @@
             //    p.style.color = event.target.value;
             //});
         }
+        if ( window.history.replaceState ) {
+            window.history.replaceState( null, null, window.location.href );
+        }
+
 
 
     </script>
@@ -39,7 +43,7 @@ Test
     <label for="last_name">Last name:</label><br>
     <input type="text" id="last_name" name="last_name" value="Doe"><br><br>
     <label for="color-picker">Select your favorite color:</label>
-    <input type="color" id="color-picker" name="color-picker"/>
+    <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
     <input type="submit" value="Submit">
   </form> 
   <p>FOTOS: {{total_images}}</p>

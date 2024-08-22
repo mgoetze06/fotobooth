@@ -1,13 +1,13 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import cgi
-from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString
+from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString,getImagecountFromFile
 
 
 
 
 class webpage():
     def __init__(self,filepath) -> None:
-        self.file = open(filepath).read()
+        self.basefile = open(filepath).read()
         pass
     def getPage(self):
         self.updatePageFromFiles()
@@ -22,12 +22,13 @@ class webpage():
         print(x)
         newColor = convertTupleToHexString(x)
         print(newColor)
-        self.file = self.file.replace(html_text, newColor)
+        self.file = self.basefile.replace(html_text, newColor)
 
 
         # update photos taken
         html_text = "{{total_images}}"
-        self.file = self.file.replace(html_text, "26")
+        amountOfImages = getImagecountFromFile()
+        self.file = self.file.replace(html_text, amountOfImages)
 
 
 

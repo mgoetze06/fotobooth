@@ -32,8 +32,30 @@ def readRGBFromFile():
     f.close()
     return rgb_tuple
 
+def getImagecountFromFile():
+    try:
+        f = open(PHOTOS_FILE_NAME, "r") 
+        lines = f.readlines()
+        imagecount = lines[0].replace("\n","")
+        f.close()
+    except:
+        imagecount = "Keine Datei gefunden."
 
+    return imagecount
+
+def writeImagecountToFile(imagecount):
+    try:
+        f = open(PHOTOS_FILE_NAME, "w") 
+        f.write(str(imagecount))
+        f.close()
+        return True
+    except:
+        return False
+    
 x = readRGBFromFile()
 print(x)
 newColor = convertTupleToHexString(x)
 print(newColor)
+print("imagecount:",getImagecountFromFile())
+print("imagecount Update erfolgreich:",writeImagecountToFile(27))
+print("imagecount:",getImagecountFromFile())
