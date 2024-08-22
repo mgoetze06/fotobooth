@@ -1,20 +1,36 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import cgi
-
-def writeToFile(rgb_tuple):
-    f = open("color.txt", "w") 
-    rgb = "RGB"
-    for i in range(3):
-         f.write(rgb[i])
-         f.write(str(rgb_tuple[i]))
-         f.write('\n')
-    f.close()
+from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString
 
 
-def convertHexToTuple(hex):
-     #    value is: #FF0000
-    h = hex.lstrip('#')
-    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+
+class webpage():
+    def __init__(self,filepath) -> None:
+        self.file = open(filepath).read()
+        pass
+    def getPage(self):
+        self.updatePageFromFiles()
+        return bytes(self.file, 'utf-8')
+                
+    
+    def updatePageFromFiles(self):
+        # update color
+        html_text = "{{default_color}}"
+        
+        x = readRGBFromFile()
+        print(x)
+        newColor = convertTupleToHexString(x)
+        print(newColor)
+        self.file = self.file.replace(html_text, newColor)
+
+
+        # update photos taken
+        html_text = "{{total_images}}"
+        self.file = self.file.replace(html_text, "26")
+
+
+
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
@@ -23,16 +39,19 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.path = '/index.html'
         try:
             file_to_open = open(self.path[1:]).read()
+            w = webpage(self.path[1:])
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            self.wfile.write(bytes(file_to_open, 'utf-8'))
+            self.wfile.write(w.getPage())
         except:
             self.send_response(404)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             self.wfile.write(b'404 - Not Found')
     def do_POST(self):
+            if self.path == '/':
+                self.path = '/index.html'
             # Parse the form data
             form = cgi.FieldStorage(
                 fp=self.rfile,
@@ -50,15 +69,19 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             print(color)
             rgbTuple = convertHexToTuple(color)
 
-            writeToFile(rgbTuple)
+            writeRGBToFile(rgbTuple)
 
-            # bytes_obj = bytes.fromhex(color)
-            # result_string = bytes_obj.decode('utf-8')
-            # print(result_string)
+
+            w = webpage(self.path[1:])
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            self.wfile.write(b'Farbe wurde aktualisiert! ' + color.encode())
+            self.wfile.write(w.getPage())
 
-httpd = HTTPServer(('', 8000), SimpleHTTPRequestHandler)
-httpd.serve_forever()
+def main():
+    httpd = HTTPServer(('', 8000), SimpleHTTPRequestHandler)
+    httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

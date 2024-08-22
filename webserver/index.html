@@ -1,16 +1,20 @@
 <html>
     <script>
         let colorPicker;
-        const defaultColor = "#0000ff";
+        const defaultColor = "{{default_color}}";
 
         window.addEventListener("load", startup, false);
 
         function startup() {
         colorPicker = document.querySelector("#color-picker");
-        //colorPicker.value = defaultColor;
+        colorPicker.value = defaultColor;
         colorPicker.addEventListener("input", updateFirst, false);
         colorPicker.addEventListener("change", updateAll, false);
         colorPicker.select();
+        const p = document.querySelector("body");
+            if (p) {
+                p.style.background = "{{default_color}}";
+            }
         }
         function updateFirst(event) {
             const p = document.querySelector("body");
@@ -20,9 +24,9 @@
         }
 
         function updateAll(event) {
-            document.querySelectorAll("p").forEach((p) => {
-                p.style.color = event.target.value;
-            });
+            //document.querySelectorAll("p").forEach((p) => {
+            //    p.style.color = event.target.value;
+            //});
         }
 
 
@@ -35,8 +39,9 @@ Test
     <label for="last_name">Last name:</label><br>
     <input type="text" id="last_name" name="last_name" value="Doe"><br><br>
     <label for="color-picker">Select your favorite color:</label>
-    <input type="color" id="color-picker" name="color-picker" value="#ff0000"/>
+    <input type="color" id="color-picker" name="color-picker"/>
     <input type="submit" value="Submit">
   </form> 
+  <p>FOTOS: {{total_images}}</p>
 </body>
 </html>
