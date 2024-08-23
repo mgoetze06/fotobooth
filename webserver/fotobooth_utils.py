@@ -52,10 +52,10 @@ def writeImagecountToFile(imagecount):
     except:
         return False
     
-x = readRGBFromFile()
-print(x)
-newColor = convertTupleToHexString(x)
-print(newColor)
-print("imagecount:",getImagecountFromFile())
-print("imagecount Update erfolgreich:",writeImagecountToFile(27))
-print("imagecount:",getImagecountFromFile())
+#x = readRGBFromFile()
+#print(x)
+#newColor = convertTupleToHexString(x)
+#print(newColor)
+#print("imagecount:",getImagecountFromFile())
+#print("imagecount Update erfolgreich:",writeImagecountToFile(27))
+#print("imagecount:",getImagecountFromFile())

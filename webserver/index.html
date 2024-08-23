@@ -1,4 +1,12 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Fotobox</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  
     <script>
         let colorPicker;
         const defaultColor = "{{default_color}}";
@@ -35,17 +43,14 @@
 
 
     </script>
+    </head>
 <body>
-Test
-<form method="post">
-    <label for="first_name">First name:</label><br>
-    <input type="text" id="first_name" name="first_name" value="John"><br>
-    <label for="last_name">Last name:</label><br>
-    <input type="text" id="last_name" name="last_name" value="Doe"><br><br>
+<form method="post" style="margin: auto;">
+    <h1>FOTOS: {{total_images}}</h1>
     <label for="color-picker">Select your favorite color:</label>
     <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
-    <input type="submit" value="Submit">
+    <input style="visibility: hidden;" type="submit" value="Submit">
   </form> 
-  <p>FOTOS: {{total_images}}</p>
+  
 </body>
 </html>
