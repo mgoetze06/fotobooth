@@ -45,12 +45,13 @@
     </script>
     </head>
 <body>
-<form method="post" style="margin: auto;">
-    <h1>FOTOS: {{total_images}}</h1>
-    <label for="color-picker">Select your favorite color:</label>
-    <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
+    <div style="width: 90%; margin: auto;">
+<form method="post" >
+    <h1 style="text-align: center;">FOTOS: {{total_images}}</h1>
+    <label style="text-align: center;" for="color-picker">Farbe auswählen:</label>
+    <input style="width: 100%; height: 80vh;" type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
     <input style="visibility: hidden;" type="submit" value="Submit">
   </form> 
-  
+</div>
 </body>
 </html>
