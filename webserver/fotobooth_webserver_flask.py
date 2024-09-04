@@ -7,50 +7,53 @@ app = Flask(__name__)
 #            static_folder='/static')
 app.config['SECRET_KEY'] = 'secret!'
 
+def readColor():
+    try:
+        x = readRGBFromFile()
+        #print(x)
+        newColor = convertTupleToHexString(x)
+        #print(newColor)
+    except:
+        newColor = "#0000000"
+        pass
+    return newColor
 
-@app.route('/', methods = ['GET', 'POST'])
-def serveNormal():
-
+def readImageCount():
     try:
         total_images = getImagecountFromFile()
 
     except:
         total_images = ""
         pass
+    return total_images
 
-    try:
-        x = readRGBFromFile()
-        print(x)
-        newColor = convertTupleToHexString(x)
-        print(newColor)
-
-    except:
-        total_images = ""
-        pass
+def readDataFromFiles():
+    total_images = readImageCount()
+    color = readColor()
+    return total_images, color
 
 
+def printRenderingTemplate(total_images, color):
+        print("rendering with images: " + total_images + " color: " + color)
 
-    if request.method == 'GET':
-        print("get")
+
+@app.post('/')
+def on_post():
     if request.method == 'POST':
-        print("post")
         data = request.form # a multidict containing POST data
         print(data['color-picker'])
         color = data['color-picker']
         rgbTuple = convertHexToTuple(color)
         writeRGBToFile(rgbTuple)
-        try:
-            x = readRGBFromFile()
-            print(x)
-            newColor = convertTupleToHexString(x)
-            print(newColor)
+        total_images, _ = readDataFromFiles()
+    printRenderingTemplate(total_images,color)
+    return render_template('index.html', total_images=total_images, color=color)
 
-        except:
-            total_images = ""
-            
-            
-    print("rendering with images: " + total_images + " color: " + newColor)
-    return render_template('index.html', total_images=total_images, color=newColor)
+@app.get('/')
+def on_get():
+    total_images, color = readDataFromFiles()
+    printRenderingTemplate(total_images,color)
+    return render_template('index.html', total_images=total_images, color=color)
 
 
 def main():
