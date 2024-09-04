@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Fotobox</title>
+    <script type="text/javascript" src="static/script.js" > </script>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  
+
+    </head>
+<body>
+    <div style="width: 90%; margin: auto;">
+<form method="post" >
+    <h1 style="text-align: center;">FOTOS: {{total_images}}</h1>
+    <label style="text-align: center;" for="color-picker">Farbe auswählen:</label>
+    <input style="width: 100%; height: 80vh;" type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
+    <input style="visibility: hidden;" type="submit" value="Submit">
+    <!--<input type="submit" value="Submit">-->
+  </form> 
+  <div id="mydiv-color" data-color='{{ color }}'></div>
+</div>
+</body>
+</html>
