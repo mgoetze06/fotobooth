@@ -1,6 +1,12 @@
-from flask import Flask, render_template, request, url_for, redirect
+from flask import Flask, render_template, request, url_for, redirect, send_from_directory
 import cgi
 from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString,getImagecountFromFile
+from flask import send_file
+from glob import glob
+from io import BytesIO
+from zipfile import ZipFile
+import os
+
 
 app = Flask(__name__)
 #            static_url_path='',
@@ -36,6 +42,28 @@ def readDataFromFiles():
 def printRenderingTemplate(total_images, color):
         print("rendering with images: " + total_images + " color: " + color)
 
+@app.route('/download')
+def download():
+    target = 'C:\\projects\\fotobooth\\programs\\countdown'
+    zipName = "FotoboxBilder.zip"
+    stream = BytesIO()
+    with ZipFile(stream, 'w') as zf:
+        for file in glob(os.path.join(target, '*.jpg')):
+            zf.write(file, os.path.basename(file))
+    stream.seek(0)
+
+    return send_file(
+        stream,
+        as_attachment=True,
+        download_name=zipName
+    )
+
+
+@app.route('/downloadsingle')
+def downloadsingle():
+    file = 'C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg'
+    #return send_from_directory('C:\\projects\\fotobooth\\programs\\countdown\\','example_collage.jpg')
+    return send_file('C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg',download_name="test.jpg")
 
 @app.post('/')
 def on_post():
