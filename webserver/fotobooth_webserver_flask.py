@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for, redirect
 import cgi
 from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString,getImagecountFromFile
 
@@ -47,7 +47,8 @@ def on_post():
         writeRGBToFile(rgbTuple)
         total_images, _ = readDataFromFiles()
     printRenderingTemplate(total_images,color)
-    return render_template('index.html', total_images=total_images, color=color)
+    return redirect(url_for('on_get'))
+    #return render_template('index.html', total_images=total_images, color=color)
 
 @app.get('/')
 def on_get():
@@ -58,7 +59,7 @@ def on_get():
 
 def main():
 
-    app.run(debug=True)
+    app.run("0.0.0.0",debug=True)
 
 
 if __name__ == "__main__":
