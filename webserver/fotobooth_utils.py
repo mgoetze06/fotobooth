@@ -1,7 +1,9 @@
 import os
+from glob import glob
 COLOR_FILE_NAME = "color.txt"
 PHOTOS_FILE_NAME = "photos.txt"
 COLLAGES_FILE_NAME = "collages.txt"
+WEBSERVER_FOLDER = "webserver"
 
 def convertHexToTuple(hex):
      #    value is: #FF0000
@@ -12,9 +14,15 @@ def convertTupleToHexString(rgb_tuple):
      return "#{:02x}{:02x}{:02x}".format(rgb_tuple[0],rgb_tuple[1],rgb_tuple[2])
 
 
+def getFilenameWithRespectToWebserverDirectory(filename):
+    if not os.path.isfile(filename):
+        return os.path.join(WEBSERVER_FOLDER,filename)
+    else:
+        return filename
 
 def writeRGBToFile(rgb_tuple):
-    f = open(COLOR_FILE_NAME, "w") 
+
+    f = open(getFilenameWithRespectToWebserverDirectory(COLOR_FILE_NAME), "w") 
     rgb = "RGB"
     for i in range(3):
          f.write(rgb[i])
@@ -24,7 +32,7 @@ def writeRGBToFile(rgb_tuple):
 
 
 def readRGBFromFile():
-    f = open(COLOR_FILE_NAME, "r") 
+    f = open(getFilenameWithRespectToWebserverDirectory(COLOR_FILE_NAME), "r") 
     rgb = "RGB"
     lines = f.readlines()
     rgb_tuple = []
@@ -35,7 +43,7 @@ def readRGBFromFile():
 
 def getImagecountFromFile():
     try:
-        f = open(PHOTOS_FILE_NAME, "r") 
+        f = open(getFilenameWithRespectToWebserverDirectory(PHOTOS_FILE_NAME), "r") 
         lines = f.readlines()
         imagecount = lines[0].replace("\n","")
         f.close()
@@ -46,7 +54,7 @@ def getImagecountFromFile():
 
 def writeImagecountToFile(imagecount):
     try:
-        f = open(PHOTOS_FILE_NAME, "w") 
+        f = open(getFilenameWithRespectToWebserverDirectory(PHOTOS_FILE_NAME), "w") 
         f.write(str(imagecount))
         f.close()
         return True
@@ -57,7 +65,7 @@ def writeImagecountToFile(imagecount):
 
 def getCollageCountFromFile():
     try:
-        f = open(COLLAGES_FILE_NAME, "r") 
+        f = open(getFilenameWithRespectToWebserverDirectory(COLLAGES_FILE_NAME), "r") 
         lines = f.readlines()
         imagecount = lines[0].replace("\n","")
         f.close()
@@ -68,7 +76,7 @@ def getCollageCountFromFile():
 
 def writeCollageCountToFile(imagecount):
     try:
-        f = open(COLLAGES_FILE_NAME, "w") 
+        f = open(getFilenameWithRespectToWebserverDirectory(COLLAGES_FILE_NAME), "w") 
         f.write(str(imagecount))
         f.close()
         return True
@@ -93,13 +101,20 @@ def getLatestImage():
     try:
         #os.chdir(folder)
         print("Searching latest image in imglist")
-        imglist = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+        #print(folder)
+        imglist = glob(os.path.join(folder, '*'))
+        #print(imglist)
         if len(imglist)>1:
             imglist = sorted(imglist, key=os.path.getmtime)
-        return imglist[-1]
+            #print(imglist)
+        return os.path.join(folder, imglist[-1])
     except: 
         print("No image in imglist, returning default")
-        return 'C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg'
+        if os.path.exists('/home/pi/programs/countdown'):
+            return '/home/pi/programs/countdown/picwait.jpg'
+        else:
+            return 'C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg'
+
     
 #x = readRGBFromFile()
 #print(x)

@@ -56,31 +56,42 @@ def printRenderingTemplate(total_images, color):
 @app.route('/download')
 def download():
     target = getLatestFolder()
-    zipName = "FotoboxBilder.zip"
-    stream = BytesIO()
-    with ZipFile(stream, 'w') as zf:
-        for file in glob(os.path.join(target, '*.jpg')):
-            zf.write(file, os.path.basename(file))
-    stream.seek(0)
+    listImages= glob(os.path.join(target, '*'))
+    if len(listImages)>0:
+        zipName = "FotoboxBilder.zip"
+        stream = BytesIO()
 
-    return send_file(
-        stream,
-        as_attachment=True,
-        download_name=zipName
-    )
+        with ZipFile(stream, 'w') as zf:
+            for file in listImages:
+                zf.write(file, os.path.basename(file))
+        stream.seek(0)
+
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=zipName
+        )
+    else:
+        return redirect(url_for('on_get'))
 
 @app.route('/reboot')
 def reboot():
     print("initiating reboot.")
     try:
-        subprocess.call(['shutdown', '-h', 'now'])
+        subprocess.call(['sudo','reboot', 'now'])
     except:
+        print("reboot failed")
         pass
 
     return redirect(url_for('on_get'))
 @app.route('/shutdown')
 def shutdown():
     print("initiating shutdown.")
+    try:
+        subprocess.call(['shutdown', '-h', 'now'])
+    except:
+        print("shutdown failed")
+        pass
     return redirect(url_for('on_get'))
 
 @app.route('/downloadsingle')
