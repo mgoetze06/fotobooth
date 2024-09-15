@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, url_for, redirect, send_from_directory
 import cgi
-from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString,getImagecountFromFile
+from fotobooth_utils import *
 from flask import send_file
 from glob import glob
 from io import BytesIO
 from zipfile import ZipFile
 import os
+import subprocess
 
 
 app = Flask(__name__)
@@ -35,7 +36,7 @@ def readImageCount():
 
 def readCollages():
     try:
-        collages = "15"
+        collages = getCollageCountFromFile()
 
     except:
         collages = ""
@@ -54,7 +55,7 @@ def printRenderingTemplate(total_images, color):
 
 @app.route('/download')
 def download():
-    target = 'C:\\projects\\fotobooth\\programs\\countdown'
+    target = getLatestFolder()
     zipName = "FotoboxBilder.zip"
     stream = BytesIO()
     with ZipFile(stream, 'w') as zf:
@@ -71,6 +72,11 @@ def download():
 @app.route('/reboot')
 def reboot():
     print("initiating reboot.")
+    try:
+        subprocess.call(['shutdown', '-h', 'now'])
+    except:
+        pass
+
     return redirect(url_for('on_get'))
 @app.route('/shutdown')
 def shutdown():
@@ -79,9 +85,9 @@ def shutdown():
 
 @app.route('/downloadsingle')
 def downloadsingle():
-    file = 'C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg'
+    file = getLatestImage()
     #return send_from_directory('C:\\projects\\fotobooth\\programs\\countdown\\','example_collage.jpg')
-    return send_file('C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg',download_name="test.jpg")
+    return send_file(file,download_name="test.jpg")
 
 @app.post('/')
 def on_post():

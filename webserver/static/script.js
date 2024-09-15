@@ -11,10 +11,10 @@ colorPicker.value = defaultColor;
 colorPicker.addEventListener("input", updateFirst, false);
 colorPicker.addEventListener("change", updateAll, false);
 colorPicker.select();
-const p = document.querySelector("body");
-    // if (p) {
-    //     p.style.background = defaultColor;
-    // }
+const p = document.getElementById("coloritem")
+if (p) {
+    p.style.background = defaultColor;
+}
 }
 function updateFirst(event) {
     //const p = document.querySelector("body");
@@ -27,6 +27,10 @@ function updateAll(event) {
     //document.querySelectorAll("p").forEach((p) => {
     //    p.style.color = event.target.value;
     //});
+    const p = document.getElementById("coloritem")
+    if (p) {
+        p.style.background = defaultColor;
+    }
 }
 
 

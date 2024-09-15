@@ -1,6 +1,7 @@
-
+import os
 COLOR_FILE_NAME = "color.txt"
 PHOTOS_FILE_NAME = "photos.txt"
+COLLAGES_FILE_NAME = "collages.txt"
 
 def convertHexToTuple(hex):
      #    value is: #FF0000
@@ -51,6 +52,54 @@ def writeImagecountToFile(imagecount):
         return True
     except:
         return False
+    
+
+
+def getCollageCountFromFile():
+    try:
+        f = open(COLLAGES_FILE_NAME, "r") 
+        lines = f.readlines()
+        imagecount = lines[0].replace("\n","")
+        f.close()
+    except:
+        imagecount = "Keine Datei gefunden."
+
+    return imagecount
+
+def writeCollageCountToFile(imagecount):
+    try:
+        f = open(COLLAGES_FILE_NAME, "w") 
+        f.write(str(imagecount))
+        f.close()
+        return True
+    except:
+        return False
+    
+
+def getLatestFolder():
+    directory = "/home/pi/programs/images/"
+    print("searching directory: ", directory)
+    try:
+        folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
+        print("found folder: ",folder)
+    except:
+        print("did not find ", directory)
+        folder = 'C:\\projects\\fotobooth\\programs\\countdown'
+        print("returning ", folder)
+    return folder
+
+def getLatestImage():
+    folder = getLatestFolder()
+    try:
+        #os.chdir(folder)
+        print("Searching latest image in imglist")
+        imglist = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+        if len(imglist)>1:
+            imglist = sorted(imglist, key=os.path.getmtime)
+        return imglist[-1]
+    except: 
+        print("No image in imglist, returning default")
+        return 'C:\\projects\\fotobooth\\programs\\countdown\\example_collage.jpg'
     
 #x = readRGBFromFile()
 #print(x)

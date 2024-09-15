@@ -14,7 +14,7 @@ import psutil
 from gpiozero import CPUTemperature
 from datetime import datetime
 import cv2
-from webserver.fotobooth_utils import writeImagecountToFile
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile
 
 
 LED_CHANNEL    = 0
@@ -194,6 +194,10 @@ def update_gallery(e): #collage process
                     
                 new_img.save(name,'JPEG')
                 collagenumber += 1
+                try:
+                    writeCollageCountToFile(collagenumber)
+                except:
+                    pass
                 #mode += 1
                 if mode > 2:
                     mode = 0
