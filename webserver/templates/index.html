@@ -4,80 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script type="text/javascript" src="/static/script.js"> </script>
+    <link href="/static/style.css" rel="stylesheet" />
     <title>Fotobox</title>
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
   <style>
-    .container{
-        display: flex;
-        height: 100%;
-        flex-direction: row;
-        justify-content: center;
-        align-content: flex-start;
-        flex-wrap: wrap;
-    }
-    
 
-    .item{
-        height: 12em;
-        width: 12em;
-        margin-left: 0.4em;
-        margin-top: 1em;
-        background-color: darkgray;
-        transition: transform 0.2s;
-    }
-    .item:hover {
-        transform: scale(1.02);
-    }
   </style>
-    <script>
-        let colorPicker;
-        const defaultColor = "{{default_color}}";
 
-        window.addEventListener("load", startup, false);
-
-        function startup() {
-        colorPicker = document.querySelector("#color-picker");
-        colorPicker.value = defaultColor;
-        colorPicker.addEventListener("input", updateFirst, false);
-        colorPicker.addEventListener("change", updateAll, false);
-        colorPicker.select();
-        const p = document.querySelector("body");
-            if (p) {
-                p.style.background = "{{default_color}}";
-            }
-        }
-        function updateFirst(event) {
-            const p = document.querySelector("body");
-            if (p) {
-                p.style.background = event.target.value;
-            }
-        }
-
-        function updateAll(event) {
-            //document.querySelectorAll("p").forEach((p) => {
-            //    p.style.color = event.target.value;
-            //});
-        }
-        if ( window.history.replaceState ) {
-            window.history.replaceState( null, null, window.location.href );
-        }
-
-
-
-    </script>
     </head>
 <body>
-    <div class="container">
+  <h1>Fotobox</h1>
+  <div class="container">
     <div class="item">
       FOTOS: {{total_images}}<br>
-      Collagen: 24
-    </div>
-    <div class="item">
-      Insgesamt: 3 Ordner
-      Ordner 1: 12 Fotos<br>
-      Ordner 2: 24 Fotos<br>
-      Ordner 3: 27 Fotos<br>
-    
+      Collagen: {{total_collages}}
     </div>
     <div class="item">
       <form method="post" style="height: 100%;">
@@ -89,22 +30,41 @@
       </form> 
       <div id="mydiv-color" data-color='{{ color }}'></div>
     </div>
+
     <div class="item">
-      Fotobox-Prozesse: 2<br>
-      take_photo_process<br>
-      update_gallery_process
+      <button onclick="alertBeforeShutdownReboot('shutdown')">Herunterfahren</button>
+      <br>
+      <button onclick="alertBeforeShutdownReboot('reboot')">Neustarten</button>
     </div>
     <div class="item">
-      Backup<br>
-      medium gefunden:<br>
-      SANDISK ULTRA 32GB<br>
-      <button>Backup durchführen</button>
-      letztes Backup: 24.06.2024 18:43
+      <button onclick="location.href = '/downloadsingle';">Einzelnes Bild</button>
+      <button onclick="location.href = '/download';">Alle Bilder (als .zip)</button>
     </div>
-    <div class="item">Herunterfahren<br>Neustarten</div>
-    <div class="item">Alle Bilder Herunterladen (Als zip)</div>
     </div>
+
         
 </div>
+<h1>In Entwicklung</h1>
+<div class="container">
+  <div class="item">
+    Insgesamt: 3 Ordner
+    Ordner 1: 12 Fotos<br>
+    Ordner 2: 24 Fotos<br>
+    Ordner 3: 27 Fotos<br>
+  </div>
+  <div class="item">
+    Fotobox-Prozesse: 2<br>
+    take_photo_process<br>
+    update_gallery_process
+  </div>
+  <div class="item">
+    Backup<br>
+    medium gefunden:<br>
+    SANDISK ULTRA 32GB<br>
+    <button>Backup durchführen</button>
+    letztes Backup: 24.06.2024 18:43
+  </div>
+</div>
+
 </body>
 </html>

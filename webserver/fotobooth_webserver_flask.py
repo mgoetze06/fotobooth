@@ -33,10 +33,20 @@ def readImageCount():
         pass
     return total_images
 
+def readCollages():
+    try:
+        collages = "15"
+
+    except:
+        collages = ""
+        pass
+    return collages
+
 def readDataFromFiles():
     total_images = readImageCount()
     color = readColor()
-    return total_images, color
+    total_collages = readCollages()
+    return total_images, color, total_collages
 
 
 def printRenderingTemplate(total_images, color):
@@ -58,6 +68,14 @@ def download():
         download_name=zipName
     )
 
+@app.route('/reboot')
+def reboot():
+    print("initiating reboot.")
+    return redirect(url_for('on_get'))
+@app.route('/shutdown')
+def shutdown():
+    print("initiating shutdown.")
+    return redirect(url_for('on_get'))
 
 @app.route('/downloadsingle')
 def downloadsingle():
@@ -73,16 +91,16 @@ def on_post():
         color = data['color-picker']
         rgbTuple = convertHexToTuple(color)
         writeRGBToFile(rgbTuple)
-        total_images, _ = readDataFromFiles()
+        total_images, _, _ = readDataFromFiles()
     printRenderingTemplate(total_images,color)
     return redirect(url_for('on_get'))
     #return render_template('index.html', total_images=total_images, color=color)
 
 @app.get('/')
 def on_get():
-    total_images, color = readDataFromFiles()
+    total_images, color, total_collages = readDataFromFiles()
     printRenderingTemplate(total_images,color)
-    return render_template('index.html', total_images=total_images, color=color)
+    return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages)
 
 
 def main():
