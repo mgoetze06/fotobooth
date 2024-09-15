@@ -21,11 +21,9 @@
       Collagen: {{total_collages}}
     </div>
     <div class="item">
-      <form method="post" style="height: 100%;">
-        <div style="height: 20%;">
+      <form method="post">
           Aktuelle Farbe:
-        </div>
-        <input style="width: 100%; height: 80%;" type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
+        <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
         <input style="visibility: hidden;" type="submit" value="Submit">
       </form> 
       <div id="mydiv-color" data-color='{{ color }}'></div>

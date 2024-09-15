@@ -15,6 +15,14 @@
   margin-top: 1em;
   background-color: darkgray;
   transition: transform 0.2s;
+  border: 2px;
+  border-color: rgb(80, 80, 80);
+  border-style: solid;
+  border-radius: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-items: stretch;
 }
 .item:hover {
   transform: scale(1.02);
@@ -22,6 +30,12 @@
 h1 {
   text-align: center;
   width: 100%;
+}
+
+button{
+  width: 100%;
+  font-weight: 400;
+  font-size: large;
 }
 
 @media(max-width: 575px){
