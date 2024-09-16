@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, url_for, redirect, send_from_directory
+
+from flask_socketio import SocketIO, emit
+
 import cgi
 from fotobooth_utils import *
 from flask import send_file
@@ -13,6 +16,10 @@ app = Flask(__name__)
 #            static_url_path='',
 #            static_folder='/static')
 app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
+
+photos_temp = 0
+
 
 def readColor():
     try:
@@ -120,8 +127,14 @@ def on_get():
     return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages)
 
 
-def main():
+@socketio.on('getvalues')
+def get_values(data):
+    global photos_temp
+    photos_temp = photos_temp + 1
+    emit('values', {'data': photos_temp}, broadcast=True)
 
+
+def main():
     app.run("0.0.0.0",debug=True)
 
 

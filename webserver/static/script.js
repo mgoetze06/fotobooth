@@ -1,5 +1,6 @@
 let colorPicker;
 let defaultColor = "#002300";
+var socket = io();
 //const defaultColor = "{{default_color}}";
 
 window.addEventListener("load", startup, false);
@@ -33,7 +34,14 @@ function updateAll(event) {
     }
 }
 
+socket.on('values', function(msg) {
+    document.getElementById('values').value = msg.data;
+  });
 
+
+function OnButtonClickGetValues(){
+    socket.emit('getvalues', {data: 'I\'m connected!'});
+}
 
 function alertBeforeShutdownReboot(location){
 

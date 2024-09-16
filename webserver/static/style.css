@@ -45,6 +45,11 @@ button{
   font-size: large;
 }
 
+.itemtemp{
+  width: 100%;
+  height: 2em;
+}
+
 @media(max-width: 575px){
   .item{
     width: 45%;
