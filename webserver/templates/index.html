@@ -19,9 +19,15 @@
   <h1>Fotobox</h1>
   <div class="container">
     <div class="item">
-      FOTOS: {{total_images}}<br>
-      Collagen: {{total_collages}}
-      <input class="itemtemp" type="button" value = "Hole Werte" onclick="OnButtonClickGetValues()"><br>
+      <input class="itemtemp" type="text" readonly id="total_images" value="{{total_images}}">
+      <input class="itemtemp" type="text" readonly id="total_images" value="{{total_collages}}">
+      <input class="itemtemp" type="text" readonly id="disk_free">
+      <input class="itemtemp" type="text" readonly id="disk_total">
+      <input class="itemtemp" type="text" readonly id="disk_percentage">
+      <input class="itemtemp" type="text" readonly id="time">
+
+
+      <input class="itemtemp" type="button" value = "Hole Werte" onclick="OnButtonClickGetValues()">
       <input class="itemtemp" type="text" readonly id="values">
     </div>
     <div class="item" id="coloritem">

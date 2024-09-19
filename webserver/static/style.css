@@ -22,7 +22,6 @@
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
-  align-items: stretch;
   justify-content: flex-start;
 }
 .item:hover {
@@ -46,8 +45,8 @@ button{
 }
 
 .itemtemp{
-  width: 100%;
-  height: 2em;
+  width: 45%;
+  height: 1.5em;
 }
 
 @media(max-width: 575px){

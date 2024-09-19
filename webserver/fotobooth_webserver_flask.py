@@ -10,6 +10,8 @@ from io import BytesIO
 from zipfile import ZipFile
 import os
 import subprocess
+import psutil
+import datetime
 
 
 app = Flask(__name__)
@@ -19,6 +21,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 photos_temp = 0
+
 
 
 def readColor():
@@ -32,30 +35,43 @@ def readColor():
         pass
     return newColor
 
-def readImageCount():
+def readImageCount(folder):
     try:
-        total_images = getImagecountFromFile()
-
+        total_images = str(countFilesInFolder(folder))
     except:
         total_images = ""
         pass
     return total_images
 
-def readCollages():
+def readCollagesCount(folder):
     try:
-        collages = getCollageCountFromFile()
-
+        collages = str(countFilesInFolder(folder))
     except:
         collages = ""
         pass
     return collages
 
 def readDataFromFiles():
-    total_images = readImageCount()
+    global folder
+    if folder == None:
+        folder = getLatestFolder()
+    total_images = readImageCount(folder)
     color = readColor()
-    total_collages = readCollages()
+    total_collages = readCollagesCount(os.path.join(folder,"collages"))
+
+
+    disk_usage = getDiskUsage()
+
+
     return total_images, color, total_collages
 
+
+def getDiskUsage():
+    disk = psutil.disk_usage('/')
+    disk_free = round((disk.free /2**30),2)
+    disk_total = round((disk.total /2**30),2)
+    disk_percentage = round((disk_free /disk_total)*100)
+    return disk_free,disk_percentage,disk_total
 
 def printRenderingTemplate(total_images, color):
         print("rendering with images: " + total_images + " color: " + color)
@@ -129,12 +145,22 @@ def on_get():
 
 @socketio.on('getvalues')
 def get_values(data):
-    global photos_temp
-    photos_temp = photos_temp + 1
-    emit('values', {'data': photos_temp}, broadcast=True)
+    total_images, color, total_collages = readDataFromFiles()
+    printRenderingTemplate(total_images,color)
+
+    emit('values', {'total_images': total_images, 'color': color, 'total_collages': total_collages}, broadcast=True)
+
+    disk_free,disk_percentage,disk_total = getDiskUsage()
+    print(disk_free,disk_percentage,disk_total)
+    emit('disk', {'disk_free': disk_free, 'disk_percentage': disk_percentage, 'disk_total': disk_total}, broadcast=True)
+    time_now = str(datetime.datetime.now().strftime("%H:%M:%S"))
+    print(time_now)
+    emit('time', {'time_now': time_now}, broadcast=True)
 
 
 def main():
+    global folder
+    folder = getLatestFolder()
     app.run("0.0.0.0",debug=True)
 
 

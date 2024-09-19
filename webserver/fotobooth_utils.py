@@ -52,6 +52,14 @@ def getImagecountFromFile():
 
     return imagecount
 
+def countFilesInFolder(folder):
+    try:
+        imagecount = len([name for name in os.listdir(folder) if os.path.isfile(os.path.join(folder, name))])
+    except:
+        imagecount = "Keine Dateien gefunden."
+
+    return imagecount
+
 def writeImagecountToFile(imagecount):
     try:
         f = open(getFilenameWithRespectToWebserverDirectory(PHOTOS_FILE_NAME), "w") 
