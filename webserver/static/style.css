@@ -28,11 +28,6 @@
 .item:hover {
   transform: scale(1.02);
 }
-.itemhead{
-  width: 100%;
-  max-height: 1em;
-  text-align: center;
-}
 
 h1 {
   text-align: center;

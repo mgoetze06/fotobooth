@@ -74,7 +74,6 @@ def getCPUValues():
 
     except:
         return "0","0"
-        pass
 
 def getDiskUsage():
     disk = psutil.disk_usage('/')
