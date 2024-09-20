@@ -19,17 +19,46 @@
   <h1>Fotobox</h1>
   <div class="container">
     <div class="item">
-      <input class="itemtemp" type="text" readonly id="total_images" value="{{total_images}}">
-      <input class="itemtemp" type="text" readonly id="total_images" value="{{total_collages}}">
-      <input class="itemtemp" type="text" readonly id="disk_free">
-      <input class="itemtemp" type="text" readonly id="disk_total">
-      <input class="itemtemp" type="text" readonly id="disk_percentage">
-      <input class="itemtemp" type="text" readonly id="time">
-
-
-      <input class="itemtemp" type="button" value = "Hole Werte" onclick="OnButtonClickGetValues()">
-      <input class="itemtemp" type="text" readonly id="values">
+      <div class="stat">
+        <p class="stat-header">Fotos</p>
+        <p class="stat-value bold" id="total_images">{{total_images}}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-header">Collagen</p>
+        <p class="stat-value" id="total_collages">{{total_collages}}</p>
+      </div>
+      <div class="stat" onclick="OnButtonClickGetValues()">
+        <p class="stat-header">Zeit</p>
+        <p class="stat-value" id="time">{{time}}</p>
+      </div>
+      <div class="stat refresh" onclick="OnButtonClickGetValues()">
+        <p class="stat-header">Refresh</p>
+      </div>
     </div>
+    <div class="item">
+      <div class="stat">
+        <p class="stat-header">Frei</p>
+        <p class="stat-value" id="disk_free">{{disk_free}}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-header">Speicher</p>
+        <p class="stat-value" id="disk_percentage">{{disk_percentage}}</p>
+        <div class="barchart">
+          <div id="disk_percentage_bar" class="barchart-percent"></div>
+        </div>
+      </div>
+      <div class="stat">
+        <p class="stat-header">CPU Load</p>
+        <p class="stat-value" id="cpu_percentage">{{cpu_percentage}}</p>
+        <div class="barchart">
+          <div id="cpu_percentage_bar" class="barchart-percent"></div>
+        </div>
+      </div>
+      <div class="stat">
+        <p class="stat-header">CPU Temp</p>
+        <p class="stat-value" id="cpu_temp">/p>
+      </div>
+      </div>  
     <div class="item" id="coloritem">
       <form method="post">
           Aktuelle Farbe:

@@ -23,6 +23,7 @@
   flex-wrap: wrap;
   flex-direction: row;
   justify-content: flex-start;
+  overflow: hidden;
 }
 .item:hover {
   transform: scale(1.02);
@@ -40,19 +41,66 @@ h1 {
 
 button{
   width: 100%;
-  font-weight: 400;
-  font-size: large;
+  font-weight: 300;
+  font-size: medium;
 }
+.refresh:hover{
+  color:rgb(20, 20, 20);
+}
+
 
 .itemtemp{
   width: 45%;
   height: 1.5em;
 }
 
+.stat{
+  width: 46%;
+  max-height: 46%;
+  background-color: rgb(202, 202, 202);
+  border-radius: 0.7em;
+  border-width: 0.5em;
+  margin: 0.2em;
+  transition: transform 0.2s;
+  overflow: hidden;
+}
+
+.wide{
+  width: 100%;
+}
+.stat:hover {
+  transform: scale(1.02);
+}
+.stat-header{
+  width: 100%;
+  text-align: center;
+}
+.stat-value{
+  text-align: center;
+  width: 100%;
+}
+.barchart {
+  width: 100%;
+  height: 2em;
+  background-color: #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: -8px;
+}
+.barchart-percent {
+  background-color: #333;
+  height: 100%;
+}
+.bold{
+  font-weight: bold;
+  font-size: x-large;
+  margin-top: 0;
+}
+
 @media(max-width: 575px){
   .item{
-    width: 45%;
-    height: 18em;
+    width: 47%;
+    height: 12em;
   }
   .container{
     width: 100%;

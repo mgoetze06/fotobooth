@@ -65,6 +65,16 @@ def readDataFromFiles():
 
     return total_images, color, total_collages
 
+def getCPUValues():
+    try:
+        cpu = CPUTemperature()
+        load = str(round((cpu.temperature/85)*100,2))
+        temp = str(round(cpu.temperature,2))
+        return temp,load
+
+    except:
+        return "0","0"
+        pass
 
 def getDiskUsage():
     disk = psutil.disk_usage('/')
@@ -156,6 +166,11 @@ def get_values(data):
     time_now = str(datetime.datetime.now().strftime("%H:%M:%S"))
     print(time_now)
     emit('time', {'time_now': time_now}, broadcast=True)
+
+    cpu_temp,cpu_percentage = getCPUValues()
+    print(cpu_temp,cpu_percentage)
+    emit('cpu', {'cpu_temp': cpu_temp,'cpu_percentage':cpu_percentage}, broadcast=True)
+
 
 
 def main():
