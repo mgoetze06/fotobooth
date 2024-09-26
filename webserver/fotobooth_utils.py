@@ -115,7 +115,10 @@ def getLatestImage():
         if len(imglist)>1:
             imglist = sorted(imglist, key=os.path.getmtime)
             #print(imglist)
-        return os.path.join(folder, imglist[-1])
+        index = -1
+        while(os.path.isdir(imglist[index])):
+            index = index - 1
+        return os.path.join(folder, imglist[index])
     except: 
         print("No image in imglist, returning default")
         if os.path.exists('/home/pi/programs/countdown'):

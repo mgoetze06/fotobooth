@@ -2,9 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+
+
+
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>-->
+    <script type="text/javascript" src="/static/socketio.js"> </script>
+    <!--für den Offlinebetrieb müssen FUnktionen aus cdnjs.cloudflare ... lokal verfügbar sein-->
 
     <script type="text/javascript" src="/static/script.js"> </script>
     <link href="/static/style.css" rel="stylesheet" />
@@ -51,8 +56,8 @@
         <p class="stat-header">Zeit</p>
         <p class="stat-value" id="time">{{time}}</p>
       </div>
-      <div class="stat refresh" onclick="OnButtonClickGetValues()">
-        <p class="stat-header">Refresh</p>
+      <div class="stat refresh" onclick="alertBeforeShutdownReboot('time')">
+        <p class="stat-header">Serverzeit setzen</p>
       </div>
     </div>
     <div class="item">
@@ -85,10 +90,14 @@
       <button onclick="alertBeforeShutdownReboot('shutdown')">Herunterfahren</button>
       <br>
       <button onclick="alertBeforeShutdownReboot('reboot')">Neustarten</button>
+
     </div>
     <div class="item">
       <button onclick="location.href = '/downloadsingle';">Einzelnes Bild</button>
-      <button onclick="location.href = '/download';">Alle Bilder (als .zip)</button>
+      <button onclick="startStreamCreation()">Alle Bilder (als .zip)</button>
+      <p id="zipfiles"></p>
+
+
     </div>
 
     </div>

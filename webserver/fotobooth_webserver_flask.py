@@ -12,6 +12,13 @@ import os
 import subprocess
 import psutil
 import datetime
+import time
+
+
+try:
+    from gpiozero import CPUTemperature
+except:
+    pass
 
 
 app = Flask(__name__)
@@ -21,7 +28,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 photos_temp = 0
-
+stream = None
 
 
 def readColor():
@@ -101,29 +108,41 @@ def shutdownServer():
     except:
         print("shutdown failed")
         pass
-@app.route('/download')
-def download():
+
+@socketio.on('createStream')
+def createStreamFromFiles():
+    global stream
     target = getLatestFolder()
     listImages= glob(os.path.join(target, '*'))
     if len(listImages)>0:
-        zipName = "FotoboxBilder.zip"
         stream = BytesIO()
         processed = 0
         total = len(listImages)
         with ZipFile(stream, 'w') as zf:
             for file in listImages:
-                processed += 1
-                zf.write(file, os.path.basename(file))
-                try:    
-                    print("processed",processed)
-                    print("total",total)
-                    socketio.emit('zipfiles', {'processed': processed, 'total': total},include_self=True)
-                except:
-                    print("failed to send zipfiles loading status")
-                    pass
+                if not os.path.isdir(file):
+                    processed += 1
+                    zf.write(file, os.path.basename(file))
+                    try:    
+                        print("processed",processed)
+                        print("total",total)
+                        emit('zipfiles', {'processed': processed, 'total': total},broadcast=True)
+                    except:
+                        print("failed to send zipfiles loading status")
+                        pass
+                else:
+                    total = total -1
 
         stream.seek(0)
+        emit("streamfinished",broadcast=True)
 
+
+
+@app.route('/download')
+def download():
+    global stream
+    zipName = "FotoboxBilder.zip"
+    if stream:
         return send_file(
             stream,
             as_attachment=True,
@@ -166,6 +185,16 @@ def on_get():
     printRenderingTemplate(total_images,color)
     return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages)
 
+@socketio.on('settime')
+def set_time(data):
+    print("Versuche Serverzeit zu setzen: ",data["data"])
+    try:
+        time = data["data"]
+        time.replace(",","")
+        subprocess.call(['sudo', 'date', '-s', time])
+    except:
+        print("Serverzeit setzen fehlgeschlagen.")
+        pass
 
 @socketio.on('getvalues')
 def get_values(data):

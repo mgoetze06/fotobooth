@@ -75,7 +75,19 @@ socket.on('disk', function(msg) {
   socket.on('zipfiles', function(msg) {
     document.getElementById('zipfiles').innerHTML = msg.processed + " / " + msg.total;
   });
+  socket.on('streamfinished', function(msg) {
+    window.location.href = '/download';
+    document.getElementById('zipfiles').style.display = 'none';
 
+  });
+
+
+
+function startStreamCreation(){
+    socket.emit('createStream');
+    document.getElementById('zipfiles').style.display = 'block';
+
+}
 
 function OnButtonClickGetValues(){
     socket.emit('getvalues', {data: 'I\'m connected!'});
@@ -100,6 +112,16 @@ function alertBeforeShutdownReboot(location){
         document.getElementById('carddescription').innerHTML = "Die Fotobox schaltet sich aus. Zum erneuten Starten der Fotobox den Strom aus- und einschalten."
 
     }
+    if (location == 'time'){
+        text = "date";
+        document.getElementById('cardbuttontext').textContent = "Zeit setzen";
+        document.getElementById('cardheading').innerHTML = "Aktuelle Zeit setzen?";
+        const d = new Date();
+        let datetext = d.toLocaleString();
+        document.getElementById('carddescription').innerHTML = datetext;
+
+
+    }
     //confirmtext = "Wollen Sie wirklich die Fotobox " + text + "?";
     //if (confirm(confirmtext) == true) {
        // socket.emit(location);
@@ -110,7 +132,16 @@ function alertBeforeShutdownReboot(location){
 
 function sendConfirmedShutdownReboot(){
    if(typeOfShutdown != ""){
-    socket.emit(typeOfShutdown);
+    if (typeOfShutdown == 'time'){
+        const d = new Date();
+        let datetext = d.toISOString();
+
+        socket.emit('settime', {data: datetext});
+
+    }else{
+        socket.emit(typeOfShutdown);
+
+    }
    }
    abort();
 }

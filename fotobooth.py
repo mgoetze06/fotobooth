@@ -113,8 +113,12 @@ def update_oled(e):
                         draw.text((10, 26), ip, fill=1) 
             e.clear()
             iteration += 1
+        else:
+            time.sleep(0.2)
         if iteration == 6:
             iteration = 0
+
+        
 def detectFaces():
     print("detecting faces")
     
@@ -205,11 +209,14 @@ def update_gallery(e): #collage process
             
             
            #e.clear()
+
+        else:
+            time.sleep(0.2)
         
 
 def timerfunc(e):      #timer for updating oled display and gallery on main display
     while True:#e is animation finished
-        gallerytime = 4     #time between new photos are shown on main display
+        gallerytime = 7     #time between new photos are shown on main display
         multiplikator = 2   #gallerytime * multiplikator = time elapsed before oled display gets updated
         start_fresh = False
         start = time.time()
@@ -220,7 +227,7 @@ def timerfunc(e):      #timer for updating oled display and gallery on main disp
                 time.sleep(0.1)
                 if photo_taken_event.is_set() or first_button_pushed.is_set() or animation_finished.is_set():
                         print("timerfunc is going to sleep")
-                        time.sleep(10)
+                        time.sleep(gallerytime*2)
                         print("timerfunc woke up")
                         start_fresh = True
                         break
@@ -306,6 +313,8 @@ def take_photo(e):
             #print(newname)
             #shutil.copy("/home/pi/programs/newimage/new.jpg", newname)
             #nr += 1
+        else:
+            time.sleep(0.2)
 def startWebserver():
     try:
         subprocess.Popen(["python","./webserver/fotobooth_webserver.py"],cwd="/home/pi/programs")
