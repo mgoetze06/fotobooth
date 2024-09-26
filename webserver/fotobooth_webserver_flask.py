@@ -85,6 +85,22 @@ def getDiskUsage():
 def printRenderingTemplate(total_images, color):
         print("rendering with images: " + total_images + " color: " + color)
 
+
+def rebootServer():
+    print("initiating reboot.")
+    try:
+        subprocess.call(['sudo','reboot', 'now'])
+    except:
+        print("reboot failed")
+        pass
+
+def shutdownServer():
+    print("initiating shutdown.")
+    try:
+        subprocess.call(['shutdown', '-h', 'now'])
+    except:
+        print("shutdown failed")
+        pass
 @app.route('/download')
 def download():
     target = getLatestFolder()
@@ -92,10 +108,20 @@ def download():
     if len(listImages)>0:
         zipName = "FotoboxBilder.zip"
         stream = BytesIO()
-
+        processed = 0
+        total = len(listImages)
         with ZipFile(stream, 'w') as zf:
             for file in listImages:
+                processed += 1
                 zf.write(file, os.path.basename(file))
+                #try:    
+                print("processed",processed)
+                print("total",total)
+                socketio.emit('zipfiles', {'processed': processed, 'total': total},namespace="/index")
+                # except:
+                #     print("failed to send zipfiles loading status")
+                #     pass
+
         stream.seek(0)
 
         return send_file(
@@ -108,22 +134,11 @@ def download():
 
 @app.route('/reboot')
 def reboot():
-    print("initiating reboot.")
-    try:
-        subprocess.call(['sudo','reboot', 'now'])
-    except:
-        print("reboot failed")
-        pass
-
+    rebootServer()
     return redirect(url_for('on_get'))
 @app.route('/shutdown')
 def shutdown():
-    print("initiating shutdown.")
-    try:
-        subprocess.call(['shutdown', '-h', 'now'])
-    except:
-        print("shutdown failed")
-        pass
+    shutdownServer()
     return redirect(url_for('on_get'))
 
 @app.route('/downloadsingle')
@@ -170,13 +185,18 @@ def get_values(data):
     print(cpu_temp,cpu_percentage)
     emit('cpu', {'cpu_temp': cpu_temp,'cpu_percentage':cpu_percentage}, broadcast=True)
 
+@socketio.on('reboot')
+def reboot_server():
+    rebootServer()
 
+@socketio.on('shutdown')
+def shutdown_server():
+    shutdownServer()
 
 def main():
     global folder
     folder = getLatestFolder()
     app.run("0.0.0.0",debug=True)
-
 
 if __name__ == "__main__":
     main()

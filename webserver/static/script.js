@@ -1,6 +1,8 @@
 let colorPicker;
 let defaultColor = "#002300";
 var socket = io();
+
+let typeOfShutdown = ""; //reboot or Shutdown
 //const defaultColor = "{{default_color}}";
 
 window.addEventListener("load", startup, false);
@@ -18,6 +20,14 @@ if (p) {
 socket.emit('getvalues', {data: 'I\'m connected!'});
 setInterval(OnButtonClickGetValues, 20500)
 }
+window.onclick = function(event) {
+    var modal = document.getElementById("cardwrapper");
+
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
 function updateFirst(event) {
     //const p = document.querySelector("body");
     // if (p) {
@@ -38,7 +48,7 @@ function updateAll(event) {
 socket.on('values', function(msg) {
     document.getElementById('total_images').innerHTML = msg.total_images;
     document.getElementById('total_collages').innerHTML = msg.total_collages;
-    document.getElementById('values').value = msg.color;
+    //document.getElementById('values').value = msg.color;
 
   });
 
@@ -62,6 +72,9 @@ socket.on('disk', function(msg) {
   socket.on('time', function(msg) {
     document.getElementById('time').innerHTML = msg.time_now
   });
+  socket.on('zipfiles', function(msg) {
+    document.getElementById('zipfiles').innerHTML = msg.processed + " / " + msg.total;
+  });
 
 
 function OnButtonClickGetValues(){
@@ -70,14 +83,38 @@ function OnButtonClickGetValues(){
 
 function alertBeforeShutdownReboot(location){
 
+    document.getElementById('cardwrapper').style.display = "flex";
+
+    typeOfShutdown = location
     if (location == 'reboot'){
         text = "neustarten";
+        document.getElementById('cardbuttontext').textContent = "Neustart";
+        document.getElementById('cardheading').innerHTML = "Fotobox neustarten?";
+        document.getElementById('carddescription').innerHTML = "Die Fotobox startet sich neu. Alle Bilder bleiben erhalten..."
+
     }
     if (location == 'shutdown'){
         text = "herunterfahren";
+        document.getElementById('cardbuttontext').textContent = "Herunterfahren";
+        document.getElementById('cardheading').innerHTML = "Fotobox herunterfahren?";
+        document.getElementById('carddescription').innerHTML = "Die Fotobox schaltet sich aus. Zum erneuten Starten der Fotobox den Strom aus- und einschalten."
+
     }
-    confirmtext = "Wollen Sie wirklich die Fotobox " + text + "?";
-    if (confirm(confirmtext) == true) {
-        window.location.href = '/' + location;
-    }
+    //confirmtext = "Wollen Sie wirklich die Fotobox " + text + "?";
+    //if (confirm(confirmtext) == true) {
+       // socket.emit(location);
+        //window.location.href = '/' + location;
+
+    //}
+}
+
+function sendConfirmedShutdownReboot(){
+   if(typeOfShutdown != ""){
+    socket.emit(typeOfShutdown);
+   }
+   abort();
+}
+
+function abort(){
+    document.getElementById('cardwrapper').style.display = "none";
 }
