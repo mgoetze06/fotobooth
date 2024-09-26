@@ -1,0 +1,10 @@
+bei aktivem hotspot gibt es probleme mit dem TLS Handshake bei z.B. pip install ...
+deshalb bei aktiver eth0 verbindung:
+
+sudo service dnsmasq stop
+sudo service hostapd stop
+
+
+nach erfolgreichem Installieren:
+sudo service dnsmasq start
+sudo service hostapd start

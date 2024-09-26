@@ -9,6 +9,18 @@ Fotobooth is a python script running on a raspberry pi, controlling a Canon DSLR
 <img src="https://github.com/mgoetze06/fotobooth/blob/main/2.jpg?raw=true" width="50%">
 <img src="https://github.com/mgoetze06/fotobooth/blob/main/3.jpg?raw=true" width="25%">
 
+# Webserver
+Raspberry PI wlan interface is used to serve as a local Access Point. This wlan interface is used to access a local webserver running Flask and SocketIO. The main script [fotobooth.py](/fotobooth.py) launches the seperate .py script [fotobooth_webserver.py](/webserver/fotobooth_webserver_flask.py) in a subprocess. This is a WIP as the better approach is to use a standard apache-webserver with a WSGI for this. Anyway the locally hosted website is used to interact with the server/fotobooth without the need of a keyboard.
+
+<img src="/webserver/sample_website.png?raw=true" width="80%">
+
+currently implemented:
+1) display amount of photos, collages, time
+2) display available storage, cpu, cpu temperature
+3) set server time
+4) shutdown/reboot server
+5) download latest image
+6) download all images as zip
 
 # Computer Vision and Machine Learning
 The fotobooth was part of an educational project at the Leipzig University of Applied Sciences (HTWK Leipzig). The folder [cvml](/cvml/) contains all scripts and notebooks developed during the project. The whole project relies heavily on opencv for python.

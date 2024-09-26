@@ -6,3 +6,6 @@ training_data/
 thumbs-collection-circles-hearts/
 .idea/
 cvml/detectionToCollage/test_gesicht.JPG
+An offline Raspberry Pi server — Kolibri 0.11.0.dev documentation.pdf
+webserver/static/socketio.js
+programs/get-camera-clock.py

@@ -1,5 +1,148 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Fotobox</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <style>
+    .container{
+        display: flex;
+        height: 100vh;
+        flex-direction: row;
+        justify-content: center;
+        align-content: flex-start;
+        flex-wrap: wrap;
+        background-color: bisque;
+    }
+    
+
+    .item{
+        height: 20em;
+        min-width: 15em;
+        max-width: 35em;
+        margin-left: 1em;
+        margin-top: 1em;
+        background-color: lightgreen;
+        transition: transform 0.2s;
+    }
+    .item:hover {
+        transform: scale(1.05);
+    }
+
+    .eventimg{
+        background-color: grey;
+        width: 100%;
+        height: 80%;
+    }
+    .eventdescription{
+        background-color: lightgrey;
+        width: 100%;
+        height: 20%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .eventplace{
+        font-size: small;
+        text-align: center;
+        font-family:AriaL;
+        background-color: red;
+    }
+    .eventdate{
+        font-size: medium;
+        text-align: center;
+        font-family:Arial;
+    }
+    .eventname{
+        font-size: x-large;
+        text-align: center;
+        font-family:Arial;
+    }
+  </style>
+    <script>
+        let colorPicker;
+        const defaultColor = "{{default_color}}";
+
+        window.addEventListener("load", startup, false);
+
+        function startup() {
+        colorPicker = document.querySelector("#color-picker");
+        colorPicker.value = defaultColor;
+        colorPicker.addEventListener("input", updateFirst, false);
+        colorPicker.addEventListener("change", updateAll, false);
+        colorPicker.select();
+        const p = document.querySelector("body");
+            if (p) {
+                p.style.background = "{{default_color}}";
+            }
+        }
+        function updateFirst(event) {
+            const p = document.querySelector("body");
+            if (p) {
+                p.style.background = event.target.value;
+            }
+        }
+
+        function updateAll(event) {
+            //document.querySelectorAll("p").forEach((p) => {
+            //    p.style.color = event.target.value;
+            //});
+        }
+        if ( window.history.replaceState ) {
+            window.history.replaceState( null, null, window.location.href );
+        }
+
+
+
+    </script>
+    </head>
 <body>
-Test
+    <div class="container">
+    <div class="item">
+        <div class="eventimg">
+        </div>
+        <div class="eventdescription">
+            <div class="eventname">
+                Colors of Beat
+            </div>
+            <div class="eventdate">
+                06.09.2024
+            </div>
+            <div class="eventplace">
+                Waldbad Mehderitzsch
+            </div>
+        </div>
+    </div>
+    <div class="item">2</div>
+    {% for event in events %}
+        <li><a href="{{ event.href }}">{{ item.caption }}</a></li>
+        <div class="item">
+            <div class="eventimg">
+                <img src="{{ event.imgsrc }}">
+            </div>
+            <div class="eventdescription">
+                <div class="eventname">
+                    {{ event.name }}
+                </div>
+                <div class="eventdate">
+                    {{ event.date }}
+                </div>
+                <div class="eventplace">
+                    {{ event.place }}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+    <div style="width: 90%; margin: auto;">
+<form method="post" >
+    <h1 style="text-align: center;">FOTOS: {{total_images}}</h1>
+    <label style="text-align: center;" for="color-picker">Farbe auswählen:</label>
+    <input style="width: 100%; height: 80vh;" type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
+    <input style="visibility: hidden;" type="submit" value="Submit">
+  </form> 
+</div>
 </body>
 </html>

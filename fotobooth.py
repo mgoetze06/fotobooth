@@ -14,6 +14,7 @@ import psutil
 from gpiozero import CPUTemperature
 from datetime import datetime
 import cv2
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile
 
 
 LED_CHANNEL    = 0
@@ -63,6 +64,10 @@ def update_oled(e):
                 draw.rectangle(device.bounding_box, outline="white", fill="black")
                 draw.text((10, 4), "heute aufgenommen: ", fill=1)
                 draw.text((50, 30), str(photo_count), fill=1) #(horizontal von links, vertikal von oben)
+            try:
+                writeImagecountToFile(photo_count)
+            except:
+                pass
                 
         if not animation_finished.is_set():
             updated = False
@@ -75,6 +80,8 @@ def update_oled(e):
                         
                         draw.text((10, 4), "heute aufgenommen: ", fill=1)
                         draw.text((50, 26), str(photo_count), fill=1) #(horizontal von links, vertikal von oben)
+
+
                     
                     if iteration == 1:
                         draw.text((3, 26), "party-fotobox@web.de", fill=1)
@@ -106,8 +113,12 @@ def update_oled(e):
                         draw.text((10, 26), ip, fill=1) 
             e.clear()
             iteration += 1
+        else:
+            time.sleep(0.2)
         if iteration == 6:
             iteration = 0
+
+        
 def detectFaces():
     print("detecting faces")
     
@@ -187,6 +198,10 @@ def update_gallery(e): #collage process
                     
                 new_img.save(name,'JPEG')
                 collagenumber += 1
+                try:
+                    writeCollageCountToFile(collagenumber)
+                except:
+                    pass
                 #mode += 1
                 if mode > 2:
                     mode = 0
@@ -194,11 +209,14 @@ def update_gallery(e): #collage process
             
             
            #e.clear()
+
+        else:
+            time.sleep(0.2)
         
 
 def timerfunc(e):      #timer for updating oled display and gallery on main display
     while True:#e is animation finished
-        gallerytime = 4     #time between new photos are shown on main display
+        gallerytime = 7     #time between new photos are shown on main display
         multiplikator = 2   #gallerytime * multiplikator = time elapsed before oled display gets updated
         start_fresh = False
         start = time.time()
@@ -209,7 +227,7 @@ def timerfunc(e):      #timer for updating oled display and gallery on main disp
                 time.sleep(0.1)
                 if photo_taken_event.is_set() or first_button_pushed.is_set() or animation_finished.is_set():
                         print("timerfunc is going to sleep")
-                        time.sleep(10)
+                        time.sleep(gallerytime*2)
                         print("timerfunc woke up")
                         start_fresh = True
                         break
@@ -295,7 +313,14 @@ def take_photo(e):
             #print(newname)
             #shutil.copy("/home/pi/programs/newimage/new.jpg", newname)
             #nr += 1
+        else:
+            time.sleep(0.2)
+def startWebserver():
+    try:
+        subprocess.Popen(["python","./webserver/fotobooth_webserver.py"],cwd="/home/pi/programs")
 
+    except:
+        pass
 
 def led_countdown(e): #e is first button pushed
     iteration = 0
@@ -446,6 +471,9 @@ if __name__ == '__main__':
     with open('/home/pi/programs/log_backup.txt', 'r') as f:
         lastbackup = f.read()
         f.close()
+
+    #waiting for i2c service to start
+    time.sleep(10)
     serial = i2c(port=1, address=0x3C)
     # substitute ssd1331(...) or sh1106(...) below if using that device
     device = sh1106(serial)
@@ -516,7 +544,8 @@ if __name__ == '__main__':
     
     process_led_count.daemon = True
     process_led_count.start()
-    
+
+
     #directory = "/home/pi/programs/images/"
     #folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
     imglist = []
@@ -608,11 +637,14 @@ if __name__ == '__main__':
             image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
             if debug:
                 print("image: ",image_date_astime)
-            
+            failedCounter = 0
             while (now - image_date_astime).total_seconds() > 15:
                 if debug:
                     print((now - image_date_astime).total_seconds())
                     print("image too old")
+                    failedCounter += 1
+                    if failedCounter > 10:
+                        raise FileNotFoundError
                 time.sleep(0.5)
                 listImages()
                 myimage = imglist[-1]
@@ -650,7 +682,6 @@ if __name__ == '__main__':
             # so we'll settle for when its content was last modified.
             #return time.ctime(stat.st_mtime)
             return datetime.fromtimestamp(stat.st_mtime)
-
 
     def checkAndCreateFolder(parent_path,new_folder):
         if not parent_path.endswith("/"):
@@ -709,6 +740,8 @@ if __name__ == '__main__':
     #root.overrideredirect(True)
     root.update()
     
+    startWebserver()
+
     #create new folder 
     folder = checkAndCreateFolder("/home/pi/programs","images")
     print(folder)

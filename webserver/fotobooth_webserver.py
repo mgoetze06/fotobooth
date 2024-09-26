@@ -1,203 +1,197 @@
-#https://github.com/davidrazmadzeExtra/RaspberryPi_HTTP_LED/blob/main/http_webserver.py
-
-#https://tutorials-raspberrypi.com/mcp3008-read-out-analog-signals-on-the-raspberry-pi/
-
-
-
-#import RPi.GPIO as GPIO
-import os
-#import cv2
-#import math
-#import numpy as np
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from threading import Thread, Event, Lock
-from time import sleep, time
-import subprocess
-
-data_lock = Lock()
-event = Event()
-
-
-
-
-host_name = '127.0.0.1'  # IP Address of Raspberry Pi
-host_port = 8000
-
-enable = False
-threadStarted = False
-mythread = Thread()
-event = Event()
-
-class MyServer(BaseHTTPRequestHandler):
-
-    def do_HEAD(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-
-    def _redirect(self, path):
-        self.send_response(303)
-        self.send_header('Content-type', 'text/html')
-        print(path)
-        self.send_header('Location', path)
-        self.end_headers()
-
-    def do_GET(self):
-        global scale
-        html = '''
-           <html>
-           <title>Fotobooth Webserver</title>
-           <body 
-            style="width:960px; margin: 20px auto;">
-           <h1>Fotobooth Webserver</h1>
-           <p>Program to control Fotobooth from webserver </p>
-           <div style="width: 800px; float:left;">
-           <div style="width: 400px; float:left;">
-            <h3>Start Script ".script_to_run.py"</h3>
-            <form action="/" method="POST">
-                <input type="submit" name="enable" value="enable">
-                <input type="submit" name="enable" value="disable">
-            </form>
-            </div>
-           <pre>
-           .
-           .
-           .
-           .
-           </pre>
-           </div>
-           <div style="width: 800px; float:left;">
-           <h2>Manual Control</h2>
-           </div>
-           <h3>Seconds to run </h3>
-            <form action="/" method="POST">
-              <label for="secondsName">Seconds to run motor :</label><br>
-              <label for="secondsName">Current Duration:  <b>%s s</b></label><br>
-                <input type="submit" name="secondsName" value="1" oninput="this.form.amountRangeSeconds.value=this.value">
-                <input type="range" name="amountRangeSeconds" min="1" max="10" value="1" oninput="this.form.secondsName.value=this.value"/>
-            </form>
-            <div style="width: 800px; float:left;">
-            <div style="width: 400px; float:left;">
-            <h3>Overall motor speed</h3>
-            <form action="/" method="POST">
-              <label for="motorspeed">Motor Speed (1 - 100):</label><br>
-              <label for="motorspeed">Current Speed:  <b>%s</b></label><br>
-                <input type="submit" name="motorspeed" value="1" oninput="this.form.amountRangeMotorspeed.value=this.value">
-                <input type="range" name="amountRangeMotorspeed" min="1" max="100" value="1" oninput="this.form.motorspeed.value=this.value"/>
-                <!--<input type="number" name="amountInput" min="1" max="100" value="1" oninput="this.form.amountRangeMotorspeed.value=this.value" />-->
-            </form>
-            </div>
-            
-            </div>
-            <div style="width: 800px; float:left;">
-            <div style="width: 400px; float:left;">
-            <h3>Individual Motor Control</h3>
-            <form action="/" method="POST">
-
-               Motor 1:
-               <input type="submit" name="submit" value="M1_left">
-               <input type="submit" name="submit" value="M1_right"><br>
-                Motor 2:
-               <input type="submit" name="submit" value="M2_left">
-               <input type="submit" name="submit" value="M2_right"><br>
-                Motor 3:
-               <input type="submit" name="submit" value="M3_left">
-               <input type="submit" name="submit" value="M3_right"><br>
-               </form>
-            </div>
-            <div style="width: 400px; float:left;">
-            <h3>Motor Control from Coordination Plane</h3>
-           <form action="/" method="POST">
-               <input type="submit" name="submit" value="X-Y">
-               <input type="submit" name="submit" value="Y">
-               <input type="submit" name="submit" value="XY"><br>
-               <input type="submit" name="submit" value="X-">
-               <input type="submit" name="submit" value="    ">
-               <input type="submit" name="submit" value="X"><br>
-               <input type="submit" name="submit" value="X-Y-">
-               <input type="submit" name="submit" value="Y-">
-               <input type="submit" name="submit" value="XY-"><br>
-               <br>
-               <input type="submit" name="submit" value="rot">
-               <input type="submit" name="submit" value="rot-">
-           </form>
-           </div>
-           </div>
-           <div style="width: 800px; float:left;">
-           <h2>Sensor data</h2>
-            <div style="width: 400px; float:left;">
-           Encoder M1: %s<br>Encoder M2: %s<br>Encoder M3: %s<br>
-           </div>    
-           <div style="width: 400px; float:left;">
-           Motor Current M1: %s<br>Motor Current M2: %s<br>Motor Current M3: %s<br>
-           </div>      
-           </div>          
-           </body>
-           </html>
-        ''' % (str(2),str(2),"test","test","test","test","test","test")
-        #temp = getTemperature()
-        self.do_HEAD()
-        #self.wfile.write(html.format(str(scale)).encode("utf-8"))
-        #print(html)
-        self.wfile.write(html.encode("utf-8"))
-
-
-    def do_POST(self):
-        global scale, speed_m1, speed_m2, speed_m3,motorspeed_manual_fromhtml,seconds_to_run,enable
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length).decode("utf-8")
-        print(post_data)
-        type_of_data = post_data.split("=")[0]
-        post_data = post_data.split("=")[1]
-        enable = False
-        if type_of_data  == "enable":
-            if post_data =="enable":
-                enable = True
-            elif post_data == "disable":
-                enable = False
-        self._redirect('/')# Redirect back to the root url
-        if enable:
-            self.handleThread() #call a thread with given speeds
-
-
-    def handleThread(self):
-        global threadStarted, mythread
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import cgi
+from fotobooth_utils import convertHexToTuple, writeRGBToFile,readRGBFromFile,convertTupleToHexString,getImagecountFromFile
+import sys, os, zipfile
+class webpage():
+    def __init__(self,filepath) -> None:
         try:
-            if threadStarted:
-                event.set()
-                mythread.join()
+            self.basefile = open(filepath).read()
         except:
-            print("could not join thread")
             pass
-        event.clear()
+        pass
+    def getPage(self):
+        self.updatePageFromFiles()
+        return bytes(self.file, 'utf-8')
+                
+    
+    def updatePageFromFiles(self):
+        # update color
+        html_text = "{{default_color}}"
+        
+        x = readRGBFromFile()
+        print(x)
+        newColor = convertTupleToHexString(x)
+        print(newColor)
+        self.file = self.basefile.replace(html_text, newColor)
+
+
+        # update photos taken
+        html_text = "{{total_images}}"
+        amountOfImages = getImagecountFromFile()
+        self.file = self.file.replace(html_text, amountOfImages)
+
+
+
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def list_directory(self, path):
+
         try:
-            mythread = Thread(target=handle_thread, args=(event,enable))
-            mythread.start()
-            threadStarted = True
+            from cStringIO import StringIO
+        except ImportError:
+            from StringIO import StringIO
+        import cgi, urllib
+
+        """Helper to produce a directory listing (absent index.html).
+
+        Return value is either a file object, or None (indicating an
+        error).  In either case, the headers are sent, making the
+        interface the same as for send_head().
+
+        """
+        try:
+            list = os.listdir(path)
+        except os.error:
+            self.send_error(404, "No permission to list directory")
+            return None
+        list.sort(key=lambda a: a.lower())
+        f = StringIO()
+        displaypath = cgi.escape(urllib.unquote(self.path))
+        f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
+        f.write("<html>\n<title>Directory listing for %s</title>\n" % displaypath)
+        f.write("<body>\n<h2>Directory listing for %s</h2>\n" % displaypath)
+        f.write("<a href='%s'>%s</a>\n" % (self.path+"?download",'Download Directory Tree as Zip'))
+        f.write("<hr>\n<ul>\n")
+        for name in list:
+            fullname = os.path.join(path, name)
+            displayname = linkname = name
+            # Append / for directories or @ for symbolic links
+            if os.path.isdir(fullname):
+                displayname = name + "/"
+                linkname = name + "/"
+            if os.path.islink(fullname):
+                displayname = name + "@"
+                # Note: a link to a directory displays with @ and links with /
+            f.write('<li><a href="%s">%s</a>\n'
+                    % (urllib.quote(linkname), cgi.escape(displayname)))
+        f.write("</ul>\n<hr>\n</body>\n</html>\n")
+        length = f.tell()
+        f.seek(0)
+        self.send_response(200)
+        encoding = sys.getfilesystemencoding()
+        self.send_header("Content-type", "text/html; charset=%s" % encoding)
+        self.send_header("Content-Length", str(length))
+        self.end_headers()
+        return f
+    def send_head(self):
+        """Common code for GET and HEAD commands.
+
+        This sends the response code and MIME headers.
+
+        Return value is either a file object (which has to be copied
+        to the outputfile by the caller unless the command was HEAD,
+        and must be closed by the caller under all circumstances), or
+        None, in which case the caller has nothing further to do.
+
+        """
+        path = self.translate_path(self.path)
+        f = None
+
+        if self.path.endswith('?download'):
+
+            tmp_file = "tmp.zip"
+            self.path = self.path.replace("?download","")
+
+            zip = zipfile.ZipFile(tmp_file, 'w')
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    if os.path.join(root, file) != os.path.join(root, tmp_file):
+                        zip.write(os.path.join(root, file))
+            zip.close()
+            path = self.translate_path(tmp_file)
+
+        elif os.path.isdir(path):
+
+            if not self.path.endswith('/'):
+                # redirect browser - doing basically what apache does
+                self.send_response(301)
+                self.send_header("Location", self.path + "/")
+                self.end_headers()
+                return None
+            else:
+
+                for index in "index.html", "index.htm":
+                    index = os.path.join(path, index)
+                    if os.path.exists(index):
+                        path = index
+                        break
+                else:
+                    return self.list_directory(path)
+        ctype = self.guess_type(path)
+        try:
+            # Always read in binary mode. Opening files in text mode may cause
+            # newline translations, making the actual size of the content
+            # transmitted *less* than the content-length!
+            f = open(path, 'rb')
+        except IOError:
+            self.send_error(404, "File not found")
+            return None
+        self.send_response(200)
+        self.send_header("Content-type", ctype)
+        fs = os.fstat(f.fileno())
+        self.send_header("Content-Length", str(fs[6]))
+        self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
+        self.end_headers()
+        return f
+    def do_GET(self):
+        if self.path == '/':
+            print("pfad webserver: ",self.path)
+            self.path = '/index.html'
+        try:
+            #file_to_open = open(self.path[1:]).read()
+            w = webpage(self.path[1:])
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(w.getPage())
         except:
-            print("could not start thread")
+            self.send_response(404)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(b'404 - Not Found')
+    def do_POST(self):
+            if self.path == '/':
+                self.path = '/index.html'
+            # Parse the form data
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={'REQUEST_METHOD': 'POST',
+                        'CONTENT_TYPE': self.headers['Content-Type'],
+                        }
+            )
+
+            # Get the form values
+            first_name = form.getvalue("first_name")
+            last_name = form.getvalue("last_name")
+            print(last_name)
+            color = form.getvalue("color-picker")
+            print(color)
+            rgbTuple = convertHexToTuple(color)
+
+            writeRGBToFile(rgbTuple)
 
 
+            w = webpage(self.path[1:])
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(w.getPage())
 
-def handle_thread(event,enable):
-    print("handling thread")
-    print("value of script enable: ", enable)
-    if enable:
-        #subprocess.Popen("./script_to_run.py")
-        cmd = os.path.join(os.getcwd(), "script_to_run.py")
-        os.system('{} {}'.format('python', cmd))
-        #os.system("./script_to_run.py")
+def main():
+    httpd = HTTPServer(('', 8000), SimpleHTTPRequestHandler)
+    httpd.serve_forever()
 
 
-# # # # # Main # # # # #
-
-if __name__ == '__main__':
-
-    http_server = HTTPServer((host_name, host_port), MyServer)
-    print("Server Starts - %s:%s" % (host_name, host_port))
-    try:
-        http_server.serve_forever()
-    except KeyboardInterrupt:
-        http_server.server_close()
-
-    # GPIO.cleanup()
+if __name__ == "__main__":
+    main()

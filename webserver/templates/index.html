@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+
+
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>-->
+    <script type="text/javascript" src="/static/socketio.js"> </script>
+    <!--für den Offlinebetrieb müssen FUnktionen aus cdnjs.cloudflare ... lokal verfügbar sein-->
+
+    <script type="text/javascript" src="/static/script.js"> </script>
+    <link href="/static/style.css" rel="stylesheet" />
+    <title>Fotobox</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <style>
+
+  </style>
+
+    </head>
+<body>
+  <h1>Fotobox</h1>
+  <div class="card-wrapper" id="cardwrapper">
+    <div class="card" id="card">
+      <div class="card-content">
+        <p class="card-heading" id="cardheading">Delete file?</p>
+        <p class="card-description" id="carddescription">Lorem ipsum dolor sit amet, consectetur adi</p>
+      </div>
+      <div class="card-button-wrapper">
+        <button class="card-button primary" id="cardbuttontext" onclick="sendConfirmedShutdownReboot()">Delete</button>
+        <button class="card-button secondary" onclick="abort()">Abbrechen</button>
+
+      </div>
+      <button class="exit-button" onclick="abort()">
+        <svg height="20px" viewBox="0 0 384 512">
+          <path
+            d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"
+          ></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="container">
+    <div class="item">
+      <div class="stat">
+        <p class="stat-header">Fotos</p>
+        <p class="stat-value bold" id="total_images">{{total_images}}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-header">Collagen</p>
+        <p class="stat-value" id="total_collages">{{total_collages}}</p>
+      </div>
+      <div class="stat" onclick="OnButtonClickGetValues()">
+        <p class="stat-header">Zeit</p>
+        <p class="stat-value" id="time">{{time}}</p>
+      </div>
+      <div class="stat refresh" onclick="alertBeforeShutdownReboot('time')">
+        <p class="stat-header">Serverzeit setzen</p>
+      </div>
+    </div>
+    <div class="item">
+      <div class="stat">
+        <p class="stat-header">Frei</p>
+        <p class="stat-value" id="disk_free">{{disk_free}}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-header">Speicher</p>
+        <p class="stat-value" id="disk_percentage">{{disk_percentage}}</p>
+        <div class="barchart">
+          <div id="disk_percentage_bar" class="barchart-percent"></div>
+        </div>
+      </div>
+      <div class="stat">
+        <p class="stat-header">CPU Load</p>
+        <p class="stat-value" id="cpu_percentage">{{cpu_percentage}}</p>
+        <div class="barchart">
+          <div id="cpu_percentage_bar" class="barchart-percent"></div>
+        </div>
+      </div>
+      <div class="stat">
+        <p class="stat-header">CPU Temp</p>
+        <p class="stat-value" id="cpu_temp">/p>
+      </div>
+      </div>  
+
+
+    <div class="item">
+      <button onclick="alertBeforeShutdownReboot('shutdown')">Herunterfahren</button>
+      <br>
+      <button onclick="alertBeforeShutdownReboot('reboot')">Neustarten</button>
+
+    </div>
+    <div class="item">
+      <button onclick="location.href = '/downloadsingle';">Einzelnes Bild</button>
+      <button onclick="startStreamCreation()">Alle Bilder (als .zip)</button>
+      <p id="zipfiles"></p>
+
+
+    </div>
+
+    </div>
+
+        
+</div>
+<div style="height: 300px;width: 100%;"></div>
+<h1>In Entwicklung</h1>
+<div class="container">
+  <div class="item">
+    Insgesamt: 3 Ordner
+    Ordner 1: 12 Fotos<br>
+    Ordner 2: 24 Fotos<br>
+    Ordner 3: 27 Fotos<br>
+  </div>
+  <div class="item">
+    <div class="stat">
+      <p class="stat-header">Eventname</p>
+      <p class="stat-value" id="disk_free">Hier Eventname eingeben</p>
+    </div>
+    <p id="zipfiles"></p>
+
+    </div>        
+<div class="item" id="coloritem">
+  <form method="post">
+      Aktuelle Farbe:
+    <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
+    <input style="visibility: hidden;" type="submit" value="Submit">
+  </form> 
+  <div id="mydiv-color" data-color='{{ color }}'></div>
+</div>
+  <div class="item">
+    Fotobox-Prozesse: 2<br>
+    take_photo_process<br>
+    update_gallery_process
+  </div>
+  <div class="item">
+    Backup<br>
+    medium gefunden:<br>
+    SANDISK ULTRA 32GB<br>
+    <button>Backup durchführen</button>
+    letztes Backup: 24.06.2024 18:43
+  </div>
+</div>
+
+</body>
+</html>
