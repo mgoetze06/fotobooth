@@ -114,13 +114,13 @@ def download():
             for file in listImages:
                 processed += 1
                 zf.write(file, os.path.basename(file))
-                #try:    
-                print("processed",processed)
-                print("total",total)
-                socketio.emit('zipfiles', {'processed': processed, 'total': total},namespace="/index")
-                # except:
-                #     print("failed to send zipfiles loading status")
-                #     pass
+                try:    
+                    print("processed",processed)
+                    print("total",total)
+                    socketio.emit('zipfiles', {'processed': processed, 'total': total},include_self=True)
+                except:
+                    print("failed to send zipfiles loading status")
+                    pass
 
         stream.seek(0)
 
