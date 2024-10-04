@@ -168,12 +168,15 @@ def downloadsingle():
 
 @app.post('/')
 def on_post():
+    global folder
     if request.method == 'POST':
         data = request.form # a multidict containing POST data
         print(data['color-picker'])
         color = data['color-picker']
         rgbTuple = convertHexToTuple(color)
         writeRGBToFile(rgbTuple)
+        if folder:
+            clearOldCollages(os.path.join(folder,"collages"))
         total_images, _, _ = readDataFromFiles()
     printRenderingTemplate(total_images,color)
     return redirect(url_for('on_get'))

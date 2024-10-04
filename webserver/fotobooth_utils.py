@@ -1,9 +1,10 @@
 import os
 from glob import glob
+import shutil
 COLOR_FILE_NAME = "color.txt"
 PHOTOS_FILE_NAME = "photos.txt"
 COLLAGES_FILE_NAME = "collages.txt"
-WEBSERVER_FOLDER = "webserver"
+WEBSERVER_FOLDER = "/home/pi/programs/webserver"
 
 def convertHexToTuple(hex):
      #    value is: #FF0000
@@ -19,6 +20,14 @@ def getFilenameWithRespectToWebserverDirectory(filename):
         return os.path.join(WEBSERVER_FOLDER,filename)
     else:
         return filename
+
+def clearOldCollages(collagesFolder):
+    print("trying to remove collage folder: ",collagesFolder)
+    if "collage" in collagesFolder:
+        try:
+            shutil.rmtree(collagesFolder)
+        except:
+            print("clearOldCollages(): error removing collages folder")
 
 def writeRGBToFile(rgb_tuple):
 

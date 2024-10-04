@@ -14,7 +14,7 @@ import psutil
 from gpiozero import CPUTemperature
 from datetime import datetime
 import cv2
-from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile
 
 
 LED_CHANNEL    = 0
@@ -122,6 +122,63 @@ def update_oled(e):
 def detectFaces():
     print("detecting faces")
     
+
+def createQuadraticCollage(size,imagepaths,folder):
+    #2x2
+    scr_w,scr_h = 1920,1080
+    cols = size #for full mode
+    rows = size
+    #folder = "/home/pi/programs/images/folder1"
+    #files = ["C:\projects\\fotobooth\data\IMG_9012.JPG","C:\projects\\fotobooth\data\IMG_9019.JPG","C:\projects\\fotobooth\data\IMG_3942.JPG","C:\projects\\fotobooth\data\IMG_3944.JPG",
+    #         "C:\projects\\fotobooth\data\IMG_9012.JPG","C:\projects\\fotobooth\data\IMG_9019.JPG","C:\projects\\fotobooth\data\IMG_3942.JPG",
+    #         "C:\projects\\fotobooth\data\IMG_9012.JPG","C:\projects\\fotobooth\data\IMG_9019.JPG","C:\projects\\fotobooth\data\IMG_3942.JPG"]
+    
+    files = imagepaths
+    try:
+        r,g,b = readRGBFromFile()
+        new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(r,g,b))
+    except:
+        new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
+
+    if len(files) < (size*size):
+        return new_img
+    
+    try:
+        new_img = new_img.resize((scr_w,scr_h))
+    except:
+        new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
+    ims = []
+    thumbnail_height = round(scr_h/rows)
+    currentUsedPhotosInCollageList = []
+    for i in range(0,4):
+        filename = folder + "/" + random.choice(imagepaths)
+        while (filename == folder + "/collages") or (filename in currentUsedPhotosInCollageList):
+            filename = folder + "/" + random.choice(imagepaths)
+        currentUsedPhotosInCollageList.append(filename)
+        image = Image.open(filename)
+
+        sizefactor = scr_h/image.height
+        thumbnail_width = round((image.width * sizefactor)/cols)
+        image = image.resize((thumbnail_width,thumbnail_height)) #resize to new image size
+        ims.append(image)
+        ims.append(image)
+        ims.append(image)
+    i = 0
+    x = round((scr_w/cols)-thumbnail_width)
+    y = round((scr_h/rows)-thumbnail_height)
+    for col in range(cols):
+        for row in range(rows):
+            #print(i,x,y)
+            new_img.paste(ims[i], (x,y))
+            i += 1
+            y += thumbnail_height
+        x += thumbnail_width
+        y = 0
+
+    return new_img
+
+
+
 def update_gallery(e): #collage process
     iteration = 0
     collagenumber = 0
@@ -143,61 +200,27 @@ def update_gallery(e): #collage process
                 imglist = []
                 os.chdir(folder)
                 imglist = os.listdir(os.getcwd())
-                #print("now i create a collage")
-                scr_w,scr_h = 1920,1080
-                #print("full 2x2 collage without overlay")
-                #overlay the png with stripes and logo on top of 2x2 collage
-                cols = 2 #for full mode
-                rows = 2
-                new_img = Image.open("/home/pi/programs/countdown/overlay.jpg")
-                new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
-                ims = []
-                thumbnail_height = round(scr_h/rows)
-                currentUsedPhotosInCollageList = []
-                for i in range(0,4):
-                    filename = folder + "/" + random.choice(imglist)
-                    while (filename == folder + "/collages") or (filename in currentUsedPhotosInCollageList):
-                        filename = folder + "/" + random.choice(imglist)
-
-                    currentUsedPhotosInCollageList.append(filename)
-                    image = Image.open(filename)
-
-                    sizefactor = scr_h/image.height
-                    thumbnail_width = round((image.width * sizefactor)/cols)
-                    image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS) #resize to new image size
-                    ims.append(image)
-            
-                i = 0
-                x = round((scr_w/cols)-thumbnail_width)
-                y = round((scr_h/rows)-thumbnail_height)
-                for col in range(cols):
-                    for row in range(rows):
-                        #print(i,x,y)
-                        new_img.paste(ims[i], (x,y))
-                        i += 1
-                        y += thumbnail_height
-                    x += thumbnail_width
-                    y = 0
-                image = Image.open("/home/pi/programs/countdown/stripes.png") #overlay the png with stripes and logo on top of 2x2 collage
-                new_img.paste(image, (0,0), image) #second image is for alpha channel in foreground
-
-                    
-                if not os.path.exists(folder + "/collages/"):
-                    os.makedirs(folder + "/collages/")
-                    
-                if collagenumber < 10:
-                    name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
-                else:
-                    if collagenumber < 100:
-                        name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
+                try:
+                    new_img = createQuadraticCollage(2,imglist,folder)
+                    if not os.path.exists(folder + "/collages/"):
+                        os.makedirs(folder + "/collages/")
+                        
+                    if collagenumber < 10:
+                        name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
                     else:
-                        if collagenumber < 1000:
-                            name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
-                        else:                          
-                            name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
-                    
-                new_img.save(name,'JPEG')
-                collagenumber += 1
+                        if collagenumber < 100:
+                            name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
+                        else:
+                            if collagenumber < 1000:
+                                name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
+                            else:                          
+                                name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
+
+                    new_img.save(name,'JPEG')
+                    collagenumber += 1
+                except:
+                    print("update_gallery(): error creating collage")
+
                 try:
                     writeCollageCountToFile(collagenumber)
                 except:
@@ -709,15 +732,26 @@ if __name__ == '__main__':
         print("current time: ", currenttime)
         timediff_minutes = abs((folderdate - currenttime).total_seconds()/60) #timediff in minutes
         print(timediff_minutes)
-        if(timediff_minutes > 60*12):
-            folder = "/home/pi/programs/images/folder" + str(folders + 1)
-            print("old folder. need to create new one: ", folder)
-            while os.path.exists(folder):
-                folders += 1
-                folder = "/home/pi/programs/images/folder" + str(folders)
-            os.makedirs(folder)
-        else:
-            print("folder is not old enough. reuse folder: ", folder)
+
+        #foldertime check is working as intended, but raspberry is not having correct time due to lack of rtc module
+        #therefore always create new folder
+        # if(timediff_minutes > 60*12):
+        #     folder = "/home/pi/programs/images/folder" + str(folders + 1)
+        #     print("old folder. need to create new one: ", folder)
+        #     while os.path.exists(folder):
+        #         folders += 1
+        #         folder = "/home/pi/programs/images/folder" + str(folders)
+        #     os.makedirs(folder)
+        # else:
+        #     print("folder is not old enough. reuse folder: ", folder)
+
+        folder = "/home/pi/programs/images/folder" + str(folders + 1)
+        print("old folder. need to create new one: ", folder)
+        while os.path.exists(folder):
+            folders += 1
+            folder = "/home/pi/programs/images/folder" + str(folders)
+        os.makedirs(folder)
+
 
         return folder
     
@@ -741,7 +775,8 @@ if __name__ == '__main__':
     root.update()
     
     startWebserver()
-
+    scr_w = 1920
+    scr_h = 1080
     #create new folder 
     folder = checkAndCreateFolder("/home/pi/programs","images")
     print(folder)
@@ -789,6 +824,14 @@ if __name__ == '__main__':
                 imgWidth = int(imgWidth*ratio)
                 imgHeight = int(imgHeight*ratio)
                 pilImage = pilImage.resize((imgWidth,imgHeight), Image.ANTIALIAS)
+
+                try:
+                    r,g,b = readRGBFromFile()
+                    new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(r,g,b))
+                    new_img.paste(pilImage, (round(scr_w/2-imgWidth/2),0))
+                    pilImage = new_img
+                except:
+                    print("error setting background")
             image = ImageTk.PhotoImage(pilImage)
             imagesprite = canvas.create_image(w/2,h/2,image=image)
             root.update()
