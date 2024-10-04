@@ -136,7 +136,28 @@ def createStreamFromFiles():
         stream.seek(0)
         emit("streamfinished",broadcast=True)
 
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    global folder
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return redirect(request.url)
+        file = request.files['file']
+        files = request.files.getlist("file") 
+        for file in files:
+            print(file)
+            if file.filename == '':
+                return redirect(request.url)
+            if file: 
+                filename = file.filename
 
+                enableCustomCollage(folder)
+                folderPath = os.path.join(folder,"customcollage")
+                filename = "custom.jpg"
+                file.save(os.path.join(folderPath, filename))
+                print("file saved",filename)
+        return redirect(url_for('on_get'))
 
 @app.route('/download')
 def download():

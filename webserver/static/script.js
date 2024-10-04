@@ -130,6 +130,10 @@ function alertBeforeShutdownReboot(location){
     //}
 }
 
+function submitFileUpload(){
+  document.getElementById('uploadForm2').submit();
+}
+
 function sendConfirmedShutdownReboot(){
    if(typeOfShutdown != ""){
     if (typeOfShutdown == 'time'){

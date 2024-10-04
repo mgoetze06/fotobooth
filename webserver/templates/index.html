@@ -99,7 +99,21 @@
 
 
     </div>
-
+    <div class="item" id="coloritem">
+      <form method="post">
+          Aktuelle Farbe:
+        <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
+        <input style="visibility: hidden;" type="submit" value="Submit">
+      </form> 
+      <form action="upload" method="post" id="uploadForm2" enctype="multipart/form-data">
+        Collage Hintergrund
+        <label for="fileInput2" class="camera-icon">
+          <i class="fa fa-camera"></i>
+      </label>
+      <input type="file" name="file" accept="image/*" id="fileInput2" onchange="submitFileUpload()" multiple>
+    </form> 
+      <div id="mydiv-color" data-color='{{ color }}'></div>
+    </div>
     </div>
 
         
@@ -121,14 +135,7 @@
     <p id="zipfiles"></p>
 
     </div>        
-<div class="item" id="coloritem">
-  <form method="post">
-      Aktuelle Farbe:
-    <input type="color" id="color-picker" name="color-picker" onchange="this.form.submit()"/>
-    <input style="visibility: hidden;" type="submit" value="Submit">
-  </form> 
-  <div id="mydiv-color" data-color='{{ color }}'></div>
-</div>
+
   <div class="item">
     Fotobox-Prozesse: 2<br>
     take_photo_process<br>

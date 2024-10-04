@@ -6,6 +6,24 @@ PHOTOS_FILE_NAME = "photos.txt"
 COLLAGES_FILE_NAME = "collages.txt"
 WEBSERVER_FOLDER = "/home/pi/programs/webserver"
 
+def IsCustomCollageEnabled(folder):
+    if os.path.isdir(os.path.join(folder,"customcollage")):
+        return True
+    else:
+        return False
+
+def enableCustomCollage(folder):
+    os.mkdir(os.path.join(folder,"customcollage"))
+
+def disableCustomCollage(folder):
+    os.path.join(folder,"customcollage")
+    print("trying to remove customcollage folder: ",folder)
+    try:
+        shutil.rmtree(folder)
+    except:
+        print("disableCustomCollage(): error removing customcollage folder")
+
+
 def convertHexToTuple(hex):
      #    value is: #FF0000
     h = hex.lstrip('#')

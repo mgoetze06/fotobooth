@@ -14,7 +14,7 @@ import psutil
 from gpiozero import CPUTemperature
 from datetime import datetime
 import cv2
-from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled
 
 
 LED_CHANNEL    = 0
@@ -152,7 +152,7 @@ def createQuadraticCollage(size,imagepaths,folder):
     currentUsedPhotosInCollageList = []
     for i in range(0,4):
         filename = folder + "/" + random.choice(imagepaths)
-        while (filename == folder + "/collages") or (filename in currentUsedPhotosInCollageList):
+        while (filename == folder + "/collages") or (filename == folder + "/customcollage") or (filename in currentUsedPhotosInCollageList):
             filename = folder + "/" + random.choice(imagepaths)
         currentUsedPhotosInCollageList.append(filename)
         image = Image.open(filename)
@@ -177,6 +177,43 @@ def createQuadraticCollage(size,imagepaths,folder):
 
     return new_img
 
+def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
+    scr_w,scr_h = 1920,1080
+
+    files = imagepaths
+    try:
+        filename = os.path.join(folder,"customcollage")
+        filename = os.path.join(filename,"custom.jpg")
+        new_img= Image.open(filename)
+    except:
+        new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
+    ims = []
+    stackedrows = 3
+    if len(files) < (stackedrows):
+        return new_img
+    thumbnail_height = round(scr_h/stackedrows)
+    currentUsedPhotosInCollageList = []
+    for i in range(0,stackedrows):
+        filename = folder + "/" + random.choice(imagepaths)
+        while (filename == folder + "/collages") or (filename == folder + "/customcollage") or (filename in currentUsedPhotosInCollageList):
+            filename = folder + "/" + random.choice(imagepaths)
+        currentUsedPhotosInCollageList.append(filename)
+        image = Image.open(filename)
+        sizefactor = scr_h/image.height
+        thumbnail_width = round((image.width * sizefactor)/stackedrows)
+        try:
+            image = image.resize((thumbnail_width,thumbnail_height)) 
+        except:
+            image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS)
+        ims.append(image)
+    i = 0
+    x = round(((scr_w*3)/4)-thumbnail_width/4)
+    y = 0
+    for i in range(0,stackedrows):
+        new_img.paste(ims[i], (x,y))
+        y += thumbnail_height
+
+    return new_img
 
 
 def update_gallery(e): #collage process
@@ -186,7 +223,7 @@ def update_gallery(e): #collage process
     while True:
         if e.is_set():
             e.clear()
-            #print("try to create collage")
+            print("try to create collage")
             directory = "/home/pi/programs/images/"
             folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
             
@@ -200,36 +237,44 @@ def update_gallery(e): #collage process
                 imglist = []
                 os.chdir(folder)
                 imglist = os.listdir(os.getcwd())
-                try:
+                #try:
+                if mode == 0:
                     new_img = createQuadraticCollage(2,imglist,folder)
-                    if not os.path.exists(folder + "/collages/"):
-                        os.makedirs(folder + "/collages/")
-                        
-                    if collagenumber < 10:
-                        name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
-                    else:
-                        if collagenumber < 100:
-                            name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
+                else:
+                    if mode == 1:
+                        if IsCustomCollageEnabled(folder):
+                            new_img = createCustomCollageWithThreeImagesOnRightSide(imglist,folder)
                         else:
-                            if collagenumber < 1000:
-                                name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
-                            else:                          
-                                name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
+                            new_img = createQuadraticCollage(2,imglist,folder)
 
-                    new_img.save(name,'JPEG')
-                    collagenumber += 1
-                except:
-                    print("update_gallery(): error creating collage")
+                if not os.path.exists(folder + "/collages/"):
+                    os.makedirs(folder + "/collages/")
+                    
+                if collagenumber < 10:
+                    name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
+                else:
+                    if collagenumber < 100:
+                        name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
+                    else:
+                        if collagenumber < 1000:
+                            name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
+                        else:                          
+                            name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
+
+                new_img.save(name,'JPEG')
+                collagenumber += 1
+                #except:
+                #    print("update_gallery(): error creating collage")
 
                 try:
                     writeCollageCountToFile(collagenumber)
                 except:
                     pass
-                #mode += 1
-                if mode > 2:
+                mode += 1
+                if mode > 1:
                     mode = 0
                 time.sleep(60)
-            
+            print("not enoug images for collage in folder:",folder)
             
            #e.clear()
 
@@ -744,13 +789,14 @@ if __name__ == '__main__':
         #     os.makedirs(folder)
         # else:
         #     print("folder is not old enough. reuse folder: ", folder)
-
-        folder = "/home/pi/programs/images/folder" + str(folders + 1)
-        print("old folder. need to create new one: ", folder)
-        while os.path.exists(folder):
-            folders += 1
-            folder = "/home/pi/programs/images/folder" + str(folders)
-        os.makedirs(folder)
+        createNewFolder = False
+        if createNewFolder:
+            folder = "/home/pi/programs/images/folder" + str(folders + 1)
+            print("old folder. need to create new one: ", folder)
+            while os.path.exists(folder):
+                folders += 1
+                folder = "/home/pi/programs/images/folder" + str(folders)
+            os.makedirs(folder)
 
 
         return folder
