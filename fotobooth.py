@@ -106,9 +106,12 @@ def update_oled(e):
                         draw.text((10, 4), "Last Backup: ", fill=1)
                         draw.text((10, 26), lastbackup, fill=1)
                     if iteration == 0:
-                        
-                        ssid = subprocess.check_output(['iwgetid']).decode()
-                        ip = check_output(['hostname', '-I'])
+                        try:
+                            ssid = subprocess.check_output(['iwgetid']).decode()
+                            ip = check_output(['hostname', '-I'])
+                        except:
+                            ssid = "FOTOBOX"
+                            ip = ""
                         draw.text((10, 4), ssid, fill=1)
                         draw.text((10, 26), ip, fill=1) 
             e.clear()
@@ -151,9 +154,17 @@ def createQuadraticCollage(size,imagepaths,folder):
     thumbnail_height = round(scr_h/rows)
     currentUsedPhotosInCollageList = []
     for i in range(0,4):
-        filename = folder + "/" + random.choice(imagepaths)
+        try:
+            randchoice = random.choice(imagepaths)
+        except:
+            return None
+        filename = folder + "/" + randchoice
         while (filename == folder + "/collages") or (filename == folder + "/customcollage") or (filename in currentUsedPhotosInCollageList):
-            filename = folder + "/" + random.choice(imagepaths)
+            try:
+                randchoice = random.choice(imagepaths)
+            except:
+                return None
+            filename = folder + "/" + randchoice
         currentUsedPhotosInCollageList.append(filename)
         image = Image.open(filename)
 
@@ -194,9 +205,17 @@ def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
     thumbnail_height = round(scr_h/stackedrows)
     currentUsedPhotosInCollageList = []
     for i in range(0,stackedrows):
-        filename = folder + "/" + random.choice(imagepaths)
+        try:
+            randchoice = random.choice(imagepaths)
+        except:
+            return None
+        filename = folder + "/" + randchoice
         while (filename == folder + "/collages") or (filename == folder + "/customcollage") or (filename in currentUsedPhotosInCollageList):
-            filename = folder + "/" + random.choice(imagepaths)
+            try:
+                randchoice = random.choice(imagepaths)
+            except:
+                return None
+            filename = folder + "/" + randchoice
         currentUsedPhotosInCollageList.append(filename)
         image = Image.open(filename)
         sizefactor = scr_h/image.height
@@ -246,35 +265,35 @@ def update_gallery(e): #collage process
                             new_img = createCustomCollageWithThreeImagesOnRightSide(imglist,folder)
                         else:
                             new_img = createQuadraticCollage(2,imglist,folder)
-
-                if not os.path.exists(folder + "/collages/"):
-                    os.makedirs(folder + "/collages/")
-                    
-                if collagenumber < 10:
-                    name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
-                else:
-                    if collagenumber < 100:
-                        name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
+                if new_img:
+                    if not os.path.exists(folder + "/collages/"):
+                        os.makedirs(folder + "/collages/")
+                        
+                    if collagenumber < 10:
+                        name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
                     else:
-                        if collagenumber < 1000:
-                            name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
-                        else:                          
-                            name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
+                        if collagenumber < 100:
+                            name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
+                        else:
+                            if collagenumber < 1000:
+                                name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
+                            else:                          
+                                name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
 
-                new_img.save(name,'JPEG')
-                collagenumber += 1
-                #except:
-                #    print("update_gallery(): error creating collage")
+                    new_img.save(name,'JPEG')
+                    collagenumber += 1
+                    #except:
+                    #    print("update_gallery(): error creating collage")
 
-                try:
-                    writeCollageCountToFile(collagenumber)
-                except:
-                    pass
-                mode += 1
-                if mode > 1:
-                    mode = 0
+                    try:
+                        writeCollageCountToFile(collagenumber)
+                    except:
+                        pass
+                    mode += 1
+                    if mode > 1:
+                        mode = 0
                 time.sleep(60)
-            print("not enoug images for collage in folder:",folder)
+            print("not enough images for collage in folder:",folder)
             
            #e.clear()
 
@@ -541,7 +560,7 @@ if __name__ == '__main__':
         f.close()
 
     #waiting for i2c service to start
-    time.sleep(10)
+    time.sleep(15)
     serial = i2c(port=1, address=0x3C)
     # substitute ssd1331(...) or sh1106(...) below if using that device
     device = sh1106(serial)
@@ -648,8 +667,11 @@ if __name__ == '__main__':
                 print("displaying collage")
                 os.chdir(folder + "/collages/")
                 collagelist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
-                myimage = random.choice(collagelist)
-                print(myimage)
+                try:
+                    myimage = random.choice(collagelist)
+                    print(myimage)
+                except:
+                    print("randImg(): error accessing existing collages")
                 
             else:
                 if pics_displayed < 3  and len(imglist) > 2 and show_last_two_photos == True:
@@ -675,14 +697,22 @@ if __name__ == '__main__':
                         
                 else:
                     #random image
-                    myimage = random.choice(imglist)
+                    try:
+                        myimage = random.choice(imglist)
+                    except:
+                        myimage = "/home/pi/programs/countdown/picwait.jpg"
+
                     
                     while (myimage == lastfile) or (myimage == "collages"):
                         #myimage = random.choice(os.listdir(self.imagepath))
-                        myimage = random.choice(imglist)
+                        try:
+                            myimage = random.choice(imglist)
+                        except:
+                            myimage = "/home/pi/programs/countdown/picwait.jpg"
 
                     lastfile = myimage
-                    myimage = folder + "/" + myimage
+                    if "picwait" not in myimage:
+                        myimage = folder + "/" + myimage
                     print("random image")
                     print(myimage)
                     print(show_last_two_photos)
