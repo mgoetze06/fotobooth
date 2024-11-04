@@ -22,12 +22,32 @@ def subprocess_return(p,output,error):
         #assert p.returncode > 1
         print('error occurred: %r' % (error,))
 
+def setCameraConfig(camera,configname,configvalue):
+    #gp.check_result(gp.gp_camera_init(camera))
+    # get configuration tree
+    config = gp.check_result(gp.gp_camera_get_config(camera))
+    # find the capture target config item
+    capture_target = gp.check_result(
+        gp.gp_widget_get_child_by_name(config, configname))
+
+    # check value in range
+    count = gp.check_result(gp.gp_widget_count_choices(capture_target))
+
+    value = int(configvalue)
+
+    if value < 0 or value >= count:
+        print('Parameter out of range')
+        return 1
+    # set value
+    value = gp.check_result(gp.gp_widget_get_choice(capture_target, value))
+    gp.check_result(gp.gp_widget_set_value(capture_target, value))
+    # set config
+    gp.check_result(gp.gp_camera_set_config(camera, config))
+    return 0
+
+
 def cameraInit():
     subprocess.Popen(["pkill", "-f", "gphoto2"])
-    #locale.setlocale(locale.LC_ALL, '')
-    #logging.basicConfig(
-    #    format='%(levelname)s: %(name)s: %(message)s', level=logging.WARNING)
-    callback_obj = gp.check_result(gp.use_python_logging())
     camera = gp.check_result(gp.gp_camera_new())
     gp.check_result(gp.gp_camera_init(camera))
     # required configuration will depend on camera type!
@@ -50,13 +70,18 @@ def cameraInit():
         config, 'capturesizeclass')
     if OK >= gp.GP_OK:
         # set value
-        value = gp.check_result(gp.gp_widget_get_choice(capture_size_class, 2))
+        print("setting capture size class")
+        value = gp.check_result(gp.gp_widget_get_choice(capture_size_class, 4))
         gp.check_result(gp.gp_widget_set_value(capture_size_class, value))
         # set config
         gp.check_result(gp.gp_camera_set_config(camera, config))
+    else:
+        print("error setting capture size class")
+
+    setCameraConfig(camera,'output',0)
     # capture preview image (not saved to camera memory card)
     print('Capturing preview image')
-
+    #time.sleep(3)
     return camera
 
 def convertCameraFileToPIL(camera_file):
@@ -108,11 +133,11 @@ def updateCanvas(image,root,canvas):
 
 def resizeImageToCanvas(pilImage,w,h):
     imgWidth, imgHeight = pilImage.size
-    #if imgWidth > w or imgHeight > h:
-    ratio = min(w/imgWidth, h/imgHeight)
-    imgWidth = int(imgWidth*ratio)
-    imgHeight = int(imgHeight*ratio)
-    pilImage = pilImage.resize((imgWidth,imgHeight), Image.ANTIALIAS)
+    if imgWidth > w or imgHeight > h:
+        ratio = min(w/imgWidth, h/imgHeight)
+        imgWidth = int(imgWidth*ratio)
+        imgHeight = int(imgHeight*ratio)
+        pilImage = pilImage.resize((imgWidth,imgHeight), Image.ANTIALIAS)
     
     return pilImage
 
@@ -128,6 +153,8 @@ def addTextToImage(image,i,imax):
     )
 
     return image
+
+
 
 root = tk.Tk()
 w, h = root.winfo_screenwidth(), root.winfo_screenheight()
@@ -147,12 +174,13 @@ canvas.pack()
 canvas.configure(background='black')
 #root.overrideredirect(True)
 root.update()
-
 camera = cameraInit()
+
 imax = 15
 for i in range(imax):
     a = datetime.datetime.now()
     image = getImageFromCamera(camera)
+    print(image.size)
     image = addTextToImage(image,i,imax)
     image = resizeImageToCanvas(image,w,h)
     updateCanvas(image,root,canvas)
