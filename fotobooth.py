@@ -51,10 +51,13 @@ def update_oled(e):
     photo_count = 0
     updated = False
     print("updating oled process started. Waiting for update events")
+    try:
+        with open('/home/pi/programs/log_backup.txt', 'r') as f:
+            lastbackup = f.read()
+            f.close()
+    except:
+        lastbackup = ""
 
-    with open('/home/pi/programs/log_backup.txt', 'r') as f:
-        lastbackup = f.read()
-        f.close()
 
     while True:
         if animation_finished.is_set() and updated == False:
@@ -554,10 +557,12 @@ if __name__ == '__main__':
     GPIO.output(backup_vcc,1)
     
     
-    
-    with open('/home/pi/programs/log_backup.txt', 'r') as f:
-        lastbackup = f.read()
-        f.close()
+    try:
+        with open('/home/pi/programs/log_backup.txt', 'r') as f:
+            lastbackup = f.read()
+            f.close()
+    except:
+        print("no backup file found")
 
     #waiting for i2c service to start
     time.sleep(15)
