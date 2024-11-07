@@ -329,7 +329,9 @@ def timerfunc(e):      #timer for updating oled display and gallery on main disp
         if not start_fresh:
             oled_update_event.set()            #set here and clear event in oled process
 
-
+def resetGphoto2():
+    subprocess.Popen(["pkill", "-f", "gphoto2"])
+    time.sleep(1)
 
 def take_photo(e):
     while True:
@@ -453,6 +455,9 @@ def led_countdown(e): #e is first button pushed
                 else:
                     color = 0x000000 #black
 
+                if i == LED_COUNT//3 or i == 0 or i == 2*LED_COUNT//3:
+                    animation_breakpoint.set()
+
                 # Set the LED color buffer value.
                 ws.ws2811_led_set(channel, i, color)
                 # Send the LED color data to the hardware.
@@ -463,7 +468,10 @@ def led_countdown(e): #e is first button pushed
             if offset == LED_COUNT + 1:
                 offset = 0
                 animation_finished.set()
+                animation_breakpoint.clear()
                 offset_idle = round(LED_COUNT/4)
+                first_button_pushed.clear()
+                time.sleep(4)
 #               
         #end of while
                 
@@ -713,7 +721,24 @@ def newImg():
         print("Fetching new Image failed.")
         print("Returning Wait-Image.")
         return "/home/pi/programs/countdown/picwait.jpg"
-    
+
+def getCountdownImageFromCounter(counter):
+    path = "/home/pi/programs/countdown/picwait.jpg"
+    if counter < 0 or counter > 3:
+        return path
+
+    if counter == 0:
+        path = "/home/pi/programs/countdown/pic1.jpg"
+    if counter == 1:
+        path = "/home/pi/programs/countdown/pic1.jpg"
+    if counter == 2:
+        path = "/home/pi/programs/countdown/pic2.jpg"
+    if counter == 3:
+        path = "/home/pi/programs/countdown/pic3.jpg"
+
+    return path
+
+
 def creation_date(path_to_file):
 #"""
 #Try to get the date that a file was created, falling back to when it was
@@ -847,6 +872,7 @@ if __name__ == '__main__':
     gallery_update_event = multiprocessing.Event()    
     oled_update_event = multiprocessing.Event()
     photo_taken_event = multiprocessing.Event()
+    animation_breakpoint = multiprocessing.Event()
 
     # GPIO callbacks
     def but1_callback(channel):
@@ -941,13 +967,20 @@ if __name__ == '__main__':
     #shutil.copy("/home/pi/programs/images/fendt.jpeg", folder+"/fendt.jpeg")
     #imagepath = "/home/pi/programs/images/test.jpg"
     picwait_displayed = False
+    ignoreOtherEvents = False
     newimage = False
     pics_displayed = 0 #for collage display
+    animation_breakpoint_counter = 0 
     camera = cameraInit()
     while True:
-        if animation_finished.is_set():
+        ignoreOtherEvents = False
+        imagechanged = False
+        if animation_finished.is_set() and not ignoreOtherEvents:
             #imagepath = newImg()
             #print("found new photo")
+            animation_breakpoint.clear()
+            animation_breakpoint_counter = 0 
+            ignoreOtherEvents = True
             numberOfCaptureTries = 0
             pilImage = captureImage(camera)
             while pilImage is None and numberOfCaptureTries < 3:
@@ -966,26 +999,36 @@ if __name__ == '__main__':
                 newimage = True
             else:
                 print("BITTE NICHT SO NAH RAN RÜDIGER")
-        else:
-            if first_button_pushed.is_set() and not picwait_displayed == True:
-                imagepath = "/home/pi/programs/countdown/picwait.jpg"
-                imagechanged = True
-                show_last_two_photos = True #flag to show last two photos
-                picwait_displayed = True
-                print("picwait")
-            else:
-                if gallery_update_event.is_set():
-                    print("updating gallery")
-                    imagepath = randImg(pics_displayed,show_last_two_photos,lastfile)
-                    lastfile = imagepath
-                    imagechanged = True
-                    pics_displayed += 1
-                    if pics_displayed == 5:
-                        pics_displayed = 0
-
-                else:
-                    imagechanged = False
+                resetGphoto2()
+                camera = cameraInit()
+        # if first_button_pushed.is_set() and not picwait_displayed == True and not ignoreOtherEvents:
+        #     ignoreOtherEvents = True
+        #     imagepath = "/home/pi/programs/countdown/picwait.jpg"
+        #     imagechanged = True
+        #     show_last_two_photos = True #flag to show last two photos
+        #     picwait_displayed = True
+        #     print("picwait")
+        if animation_breakpoint.is_set() and not ignoreOtherEvents:
+            ignoreOtherEvents = True
+            imagepath = getCountdownImageFromCounter(animation_breakpoint_counter)
+            #imagepath = "/home/pi/programs/countdown/pic1.jpg"
+            imagechanged = True
+            show_last_two_photos = True #flag to show last two photos
+            picwait_displayed = True
+            animation_breakpoint.clear()
+            animation_breakpoint_counter += 1
+            print(imagepath)
+        if gallery_update_event.is_set() and not ignoreOtherEvents:
+            ignoreOtherEvents = True
+            print("updating gallery")
+            imagepath = randImg(pics_displayed,show_last_two_photos,lastfile)
+            lastfile = imagepath
+            imagechanged = True
+            pics_displayed += 1
+            if pics_displayed == 5:
+                pics_displayed = 0
         if imagechanged == True:
+            imagechanged = False
             if not newimage:
                 try:
                     pilImage = Image.open(imagepath)
