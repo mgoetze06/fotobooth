@@ -1,3 +1,15 @@
+#das problem an liveview ist der schwächere autofocus. Man kann die preview der Kamera zwar gut als vorschau verwenden
+#z.b. um das positionieren vor dem auslösen vor der kamera zu ermöglichen
+#bei umgeschaltenem Spiegel wird ein schwächerer autofocus verwendet, der bis zu 5s bfür die berechnung benötigt
+#dadurch ist vor dem aufnehmen des bildes ein umschalten in den normalen dslr modus notwendig
+#das umschalten des spiegels hört sich allerdings wie das aufnehmen eines bildes an, daher kommt es zur verwirrung
+
+
+# --> liveview müsste also durch eine externe kamera realisiert werden
+
+
+
+
 #import matplotlib.pyplot as plt
 from PIL import Image,ImageTk
 import io
