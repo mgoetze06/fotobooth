@@ -1,7 +1,7 @@
 import cv2
 
-camera = cv2.VideoCapture(cv2.CAP_V4L2)
-#camera = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+#camera = cv2.VideoCapture(cv2.CAP_V4L2)
+camera = cv2.VideoCapture(0,cv2.CAP_DSHOW)
 #fourcc = cv2.VideoWriter_fourcc(*'XVID')
 print("Frame default resolution: (" + str(camera.get(cv2.CAP_PROP_FRAME_WIDTH)) + "; " + str(camera.get(cv2.CAP_PROP_FRAME_HEIGHT)) + ")")
 #camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)#(7680, 4320

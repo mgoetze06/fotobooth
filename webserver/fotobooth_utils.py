@@ -4,7 +4,42 @@ import shutil
 COLOR_FILE_NAME = "color.txt"
 PHOTOS_FILE_NAME = "photos.txt"
 COLLAGES_FILE_NAME = "collages.txt"
+COUNTDOWN_FILE_NAME = "countdown.txt"
 WEBSERVER_FOLDER = "/home/pi/programs/webserver"
+
+def getCountdownFromFile():
+    try:
+        f = open(getFilenameWithRespectToWebserverDirectory(COUNTDOWN_FILE_NAME), "r") 
+        lines = f.readlines()
+        countdown = lines[0].replace("\n","").split("countdown: ")[1]
+        f.close()
+
+        if "in" in countdown:
+            return False
+        else:
+            return True
+
+    except:
+        return False
+
+
+def activateCountdownBeforeTakingPicture():
+    try:
+        f = open(getFilenameWithRespectToWebserverDirectory(COUNTDOWN_FILE_NAME), "w") 
+        f.write("countdown: active")
+        f.close()
+        return True
+    except:
+        return False
+
+def deactivateCountdownBeforeTakingPicture():
+    try:
+        f = open(getFilenameWithRespectToWebserverDirectory(COUNTDOWN_FILE_NAME), "w") 
+        f.write("countdown: inactive")
+        f.close()
+        return True
+    except:
+        return False
 
 def IsCustomCollageEnabled(folder):
     if os.path.isdir(os.path.join(folder,"customcollage")):

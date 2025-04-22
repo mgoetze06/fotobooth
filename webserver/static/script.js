@@ -72,6 +72,9 @@ socket.on('disk', function(msg) {
   socket.on('time', function(msg) {
     document.getElementById('time').innerHTML = msg.time_now
   });
+  socket.on('countdown', function(msg) {
+    document.getElementById('countdown_active').innerHTML = msg.countdown
+  });
   socket.on('zipfiles', function(msg) {
     document.getElementById('zipfiles').innerHTML = msg.processed + " / " + msg.total;
   });
@@ -86,6 +89,11 @@ socket.on('disk', function(msg) {
 function startStreamCreation(){
     socket.emit('createStream');
     document.getElementById('zipfiles').style.display = 'block';
+
+}
+
+function OnButtonClickToggleCountdown(){
+  socket.emit('toggleCountdown', {data: 'I\'m connected!'});
 
 }
 

@@ -86,10 +86,12 @@ if __name__ == '__main__':
     root.update()
     newimage = False
     livePreview = True
-
     if livePreview:
         print("accessing webcam stream")
-        cap = cv2.VideoCapture(cv2.CAP_V4L2)
+        try:
+            cap = cv2.VideoCapture(cv2.CAP_V4L2)
+        except:
+            cap = cv2.VideoCapture(0)
         livecanvas = tk.Canvas(root, width=cap.get(cv2.CAP_PROP_FRAME_WIDTH),height=cap.get(cv2.CAP_PROP_FRAME_HEIGHT),highlightthickness=0)
         livecanvas.place(in_= canvas, x = 0, y = 0)
         i = 0

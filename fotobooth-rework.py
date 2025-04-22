@@ -16,7 +16,7 @@ from datetime import datetime
 import cv2
 import io
 import gphoto2 as gp
-from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled,getCountdownFromFile
 
 
 LED_CHANNEL    = 0
@@ -449,14 +449,16 @@ def led_countdown(e): #e is first button pushed
     while True:
         while e.is_set() and not animation_finished.is_set():
             print('animating countdown leds ...')
+            if offset == LED_COUNT//3 or offset == 0 or offset == 2*LED_COUNT//3:
+                print("setting animation breakpoint")
+                animation_breakpoint.set()
+                time.sleep(0.1)
+
             for i in range(LED_COUNT):
                 if i < offset:
                     color = 0xffffff #white
                 else:
                     color = 0x000000 #black
-
-                if i == LED_COUNT//3 or i == 0 or i == 2*LED_COUNT//3:
-                    animation_breakpoint.set()
 
                 # Set the LED color buffer value.
                 ws.ws2811_led_set(channel, i, color)
@@ -464,9 +466,13 @@ def led_countdown(e): #e is first button pushed
                 resp = ws.ws2811_render(leds)
                 # Increase offset to animate colors moving.  
             offset += 1
-            time.sleep(0.05)
+            print("offset: ",offset)
+
+            time.sleep(0.1)
             if offset == LED_COUNT + 1:
                 offset = 0
+                animation_breakpoint.set()
+                #time.sleep(0.3)
                 animation_finished.set()
                 animation_breakpoint.clear()
                 offset_idle = round(LED_COUNT/4)
@@ -730,11 +736,11 @@ def getCountdownImageFromCounter(counter):
     if counter == 0:
         path = "/home/pi/programs/countdown/pic1.jpg"
     if counter == 1:
-        path = "/home/pi/programs/countdown/pic1.jpg"
-    if counter == 2:
         path = "/home/pi/programs/countdown/pic2.jpg"
-    if counter == 3:
+    if counter == 2:
         path = "/home/pi/programs/countdown/pic3.jpg"
+    if counter == 3:
+        path = "/home/pi/programs/countdown/picwait.jpg"
 
     return path
 
@@ -803,6 +809,12 @@ def checkAndCreateFolder(parent_path,new_folder):
 
 
     return folder
+
+def readCountdownFromFile():
+    try:
+        return getCountdownFromFile()
+    except:
+        return False
 
 if __name__ == '__main__':
     
@@ -972,9 +984,15 @@ if __name__ == '__main__':
     pics_displayed = 0 #for collage display
     animation_breakpoint_counter = 0 
     camera = cameraInit()
+    #showCountdown = readCountdownFromFile()
+    showCountdownRefresher = 0
     while True:
         ignoreOtherEvents = False
         imagechanged = False
+        if showCountdownRefresher == 100:
+            showCountdownRefresher = 0
+            showCountdown = readCountdownFromFile()
+        showCountdownRefresher += 1
         if animation_finished.is_set() and not ignoreOtherEvents:
             #imagepath = newImg()
             #print("found new photo")
@@ -1001,14 +1019,14 @@ if __name__ == '__main__':
                 print("BITTE NICHT SO NAH RAN RÜDIGER")
                 resetGphoto2()
                 camera = cameraInit()
-        # if first_button_pushed.is_set() and not picwait_displayed == True and not ignoreOtherEvents:
-        #     ignoreOtherEvents = True
-        #     imagepath = "/home/pi/programs/countdown/picwait.jpg"
-        #     imagechanged = True
-        #     show_last_two_photos = True #flag to show last two photos
-        #     picwait_displayed = True
-        #     print("picwait")
-        if animation_breakpoint.is_set() and not ignoreOtherEvents:
+        if first_button_pushed.is_set() and not picwait_displayed == True and not ignoreOtherEvents and not showCountdown:
+            ignoreOtherEvents = True
+            imagepath = getCountdownImageFromCounter(-1)
+            imagechanged = True
+            show_last_two_photos = True #flag to show last two photos
+            picwait_displayed = True
+            print("picwait")
+        if animation_breakpoint.is_set() and not ignoreOtherEvents and showCountdown:
             ignoreOtherEvents = True
             imagepath = getCountdownImageFromCounter(animation_breakpoint_counter)
             #imagepath = "/home/pi/programs/countdown/pic1.jpg"

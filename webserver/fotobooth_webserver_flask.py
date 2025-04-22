@@ -109,6 +109,12 @@ def shutdownServer():
         print("shutdown failed")
         pass
 
+def getCountdown():
+    countDownActiveBool = getCountdownFromFile()
+    if countDownActiveBool:
+        return "Aktiv"
+    return "Inaktiv"
+
 @socketio.on('createStream')
 def createStreamFromFiles():
     global stream
@@ -206,8 +212,9 @@ def on_post():
 @app.get('/')
 def on_get():
     total_images, color, total_collages = readDataFromFiles()
+    countdown_active = getCountdown()
     printRenderingTemplate(total_images,color)
-    return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages)
+    return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages, countdown_active = countdown_active)
 
 @socketio.on('settime')
 def set_time(data):
@@ -219,6 +226,18 @@ def set_time(data):
     except:
         print("Serverzeit setzen fehlgeschlagen.")
         pass
+
+
+@socketio.on('toggleCountdown')
+def toggle_countdown(data):
+    if getCountdownFromFile():
+        deactivateCountdownBeforeTakingPicture()
+    else:
+        activateCountdownBeforeTakingPicture()
+
+    countdown = getCountdown()
+    emit("countdown",{'countdown': countdown})
+
 
 @socketio.on('getvalues')
 def get_values(data):
