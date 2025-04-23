@@ -5,6 +5,7 @@ COLOR_FILE_NAME = "color.txt"
 PHOTOS_FILE_NAME = "photos.txt"
 COLLAGES_FILE_NAME = "collages.txt"
 COUNTDOWN_FILE_NAME = "countdown.txt"
+SLEEPTIME_COUNTDOWN_FILE_NAME = "sleeptime.txt"
 WEBSERVER_FOLDER = "/home/pi/programs/webserver"
 
 def getCountdownFromFile():
@@ -19,6 +20,27 @@ def getCountdownFromFile():
         else:
             return True
 
+    except:
+        return False
+    
+
+def getSleepTimeSecondsFromFile():
+    try:
+        f = open(getFilenameWithRespectToWebserverDirectory(SLEEPTIME_COUNTDOWN_FILE_NAME), "r") 
+        lines = f.readlines()
+        sleeptime = float(lines[0].replace("\n","").split("sleeptime seconds: ")[1])
+        f.close()
+        return sleeptime
+    except:
+        return 0.1
+    
+def writeSleepTimeSeconds(seconds):
+    print("updating sleeptime for countdown to value in seconds: "+ str(seconds))
+    try:
+        f = open(getFilenameWithRespectToWebserverDirectory(SLEEPTIME_COUNTDOWN_FILE_NAME), "w") 
+        f.write("sleeptime seconds: " + str(seconds))
+        f.close()
+        return True
     except:
         return False
 

@@ -213,8 +213,9 @@ def on_post():
 def on_get():
     total_images, color, total_collages = readDataFromFiles()
     countdown_active = getCountdown()
+    countDownSleepTimeSeconds = getSleepTimeSecondsFromFile()
     printRenderingTemplate(total_images,color)
-    return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages, countdown_active = countdown_active)
+    return render_template('index.html', total_images=total_images, color=color, total_collages=total_collages, countdown_active = countdown_active,countDownSleepTimeSeconds=countDownSleepTimeSeconds)
 
 @socketio.on('settime')
 def set_time(data):
@@ -237,6 +238,15 @@ def toggle_countdown(data):
 
     countdown = getCountdown()
     emit("countdown",{'countdown': countdown})
+
+@socketio.on('setCountDownSleepTimeSeconds')
+def set_CountDownSleepTimeSeconds(data):
+
+    seconds = float(data["data"])
+    writeSleepTimeSeconds(seconds)
+    seconds = getSleepTimeSecondsFromFile()
+
+    emit("CountDownSleepTimeSeconds",{'CountDownSleepTimeSeconds': seconds})
 
 
 @socketio.on('getvalues')

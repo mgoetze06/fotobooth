@@ -17,6 +17,10 @@ const p = document.getElementById("coloritem")
 if (p) {
     p.style.background = defaultColor;
 }
+
+document.getElementById("myRange").oninput = function() {
+  document.getElementById('CountDownSleepTimeSeconds').innerHTML = this.value;
+} 
 socket.emit('getvalues', {data: 'I\'m connected!'});
 setInterval(OnButtonClickGetValues, 20500)
 }
@@ -75,6 +79,9 @@ socket.on('disk', function(msg) {
   socket.on('countdown', function(msg) {
     document.getElementById('countdown_active').innerHTML = msg.countdown
   });
+  socket.on('CountDownSleepTimeSeconds', function(msg) {
+    document.getElementById('CountDownSleepTimeSeconds').innerHTML = msg.CountDownSleepTimeSeconds
+  });
   socket.on('zipfiles', function(msg) {
     document.getElementById('zipfiles').innerHTML = msg.processed + " / " + msg.total;
   });
@@ -96,6 +103,10 @@ function OnButtonClickToggleCountdown(){
   socket.emit('toggleCountdown', {data: 'I\'m connected!'});
 
 }
+function OnButtonClickSetCountDownSleepTimeSeconds(){
+  socket.emit('setCountDownSleepTimeSeconds', {data: document.getElementById('CountDownSleepTimeSeconds').innerHTML});
+}
+
 
 function OnButtonClickGetValues(){
     socket.emit('getvalues', {data: 'I\'m connected!'});

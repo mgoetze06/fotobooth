@@ -119,6 +119,12 @@
         <p class="stat-header">Countdown</p>
         <p class="stat-value bold" id="countdown_active">{{countdown_active}}</p>
       </div>
+      <div class="stat" onclick="OnButtonClickSetCountDownSleepTimeSeconds()">
+        <p class="stat-header">Verzögerung</p>
+        <p class="stat-value bold" id="CountDownSleepTimeSeconds">{{countDownSleepTimeSeconds}}</p>
+        
+      </div>
+      <input style="width: 100%" type="range" min="0.03" max="0.3" class="slider" id="myRange">
     </div>
     </div>
 

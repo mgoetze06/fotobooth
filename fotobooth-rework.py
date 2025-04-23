@@ -16,7 +16,7 @@ from datetime import datetime
 import cv2
 import io
 import gphoto2 as gp
-from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled,getCountdownFromFile
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled,getCountdownFromFile,getSleepTimeSecondsFromFile
 
 
 LED_CHANNEL    = 0
@@ -401,6 +401,12 @@ def startWebserver():
     except:
         pass
 
+def readSleepTimeSecondsFromFile():
+    try:
+        return getSleepTimeSecondsFromFile()
+    except:
+        return 0.1
+
 def led_countdown(e): #e is first button pushed
     iteration = 0
     offset = 0 #offset for countdown animation
@@ -445,14 +451,21 @@ def led_countdown(e): #e is first button pushed
                 
             #pixels.write()
             time.sleep(wait)
-    
+    sleepTimeRefresher = 0
+    sleepTimeSeconds = readSleepTimeSecondsFromFile()
+
     while True:
+        sleepTimeRefresher += 1
+        if sleepTimeRefresher == 500:
+            sleepTimeRefresher = 0
+            sleepTimeSeconds = readSleepTimeSecondsFromFile()
+            print("Updating sleeptime to: ",sleepTimeSeconds)
         while e.is_set() and not animation_finished.is_set():
             print('animating countdown leds ...')
             if offset == LED_COUNT//3 or offset == 0 or offset == 2*LED_COUNT//3:
                 print("setting animation breakpoint")
                 animation_breakpoint.set()
-                time.sleep(0.1)
+                time.sleep(sleepTimeSeconds)
 
             for i in range(LED_COUNT):
                 if i < offset:
@@ -468,7 +481,7 @@ def led_countdown(e): #e is first button pushed
             offset += 1
             print("offset: ",offset)
 
-            time.sleep(0.1)
+            time.sleep(sleepTimeSeconds)
             if offset == LED_COUNT + 1:
                 offset = 0
                 animation_breakpoint.set()
@@ -564,12 +577,20 @@ def resizeImageToCanvas(pilImage,w,h):
 
 def cameraInit():
     subprocess.Popen(["pkill", "-f", "gphoto2"])
-    camera = gp.check_result(gp.gp_camera_new())
-    gp.check_result(gp.gp_camera_init(camera))
+    try:
+        camera = gp.check_result(gp.gp_camera_new())
+        gp.check_result(gp.gp_camera_init(camera))
+    except:
+        print("cameraInit(): error initializing camera")
+        return None
     # required configuration will depend on camera type!
     print('Checking camera config')
     # get configuration tree
-    config = gp.check_result(gp.gp_camera_get_config(camera))
+    try:
+        config = gp.check_result(gp.gp_camera_get_config(camera))
+    except:
+        print("cameraInit(): error getting camera config")
+        return None
     # find the image format config item
     # camera dependent - 'imageformat' is 'imagequality' on some
     OK, image_format = gp.gp_widget_get_child_by_name(config, 'imageformat')
@@ -989,7 +1010,7 @@ if __name__ == '__main__':
     while True:
         ignoreOtherEvents = False
         imagechanged = False
-        if showCountdownRefresher == 100:
+        if showCountdownRefresher == 1000:
             showCountdownRefresher = 0
             showCountdown = readCountdownFromFile()
         showCountdownRefresher += 1
@@ -997,6 +1018,8 @@ if __name__ == '__main__':
             #imagepath = newImg()
             #print("found new photo")
             animation_breakpoint.clear()
+            animation_finished.clear()
+            first_button_pushed.clear()
             animation_breakpoint_counter = 0 
             ignoreOtherEvents = True
             numberOfCaptureTries = 0
@@ -1019,6 +1042,14 @@ if __name__ == '__main__':
                 print("BITTE NICHT SO NAH RAN RÜDIGER")
                 resetGphoto2()
                 camera = cameraInit()
+                numberOfAttempts = 0
+                while camera == None and numberOfAttempts < 10:
+                    time.sleep(10)
+                    resetGphoto2()
+                    camera = cameraInit()
+                    numberOfAttempts += 1
+
+
         if first_button_pushed.is_set() and not picwait_displayed == True and not ignoreOtherEvents and not showCountdown:
             ignoreOtherEvents = True
             imagepath = getCountdownImageFromCounter(-1)
