@@ -8,6 +8,10 @@ COUNTDOWN_FILE_NAME = "countdown.txt"
 SLEEPTIME_COUNTDOWN_FILE_NAME = "sleeptime.txt"
 WEBSERVER_FOLDER = "/home/pi/programs/webserver"
 
+maximumSleepTime = 0.3
+minimumSleepTime = 0.05
+sleepTimeStepSize = 0.01
+
 def getCountdownFromFile():
     try:
         f = open(getFilenameWithRespectToWebserverDirectory(COUNTDOWN_FILE_NAME), "r") 
@@ -28,22 +32,39 @@ def getSleepTimeSecondsFromFile():
     try:
         f = open(getFilenameWithRespectToWebserverDirectory(SLEEPTIME_COUNTDOWN_FILE_NAME), "r") 
         lines = f.readlines()
-        sleeptime = float(lines[0].replace("\n","").split("sleeptime seconds: ")[1])
+        sleeptime = round(float(lines[0].replace("\n","").split("sleeptime seconds: ")[1]),3)
         f.close()
         return sleeptime
     except:
         return 0.1
     
 def writeSleepTimeSeconds(seconds):
-    print("updating sleeptime for countdown to value in seconds: "+ str(seconds))
+    print("try to set sleeptime for countdown to value in seconds: "+ str(seconds))
     try:
         f = open(getFilenameWithRespectToWebserverDirectory(SLEEPTIME_COUNTDOWN_FILE_NAME), "w") 
         f.write("sleeptime seconds: " + str(seconds))
         f.close()
+        print("CountDownSleepTimeSeconds set successful") 
         return True
     except:
+        print("CountDownSleepTimeSeconds failed")
         return False
+def increaseSleepTimeSeconds():
+    print("slower Countdown (increasing sleeptime)")
+    seconds = getSleepTimeSecondsFromFile()
+    seconds = seconds + sleepTimeStepSize
+    if seconds > maximumSleepTime:
+        seconds = maximumSleepTime
+    writeSleepTimeSeconds(seconds)
 
+
+def decreaseSleepTimeSeconds():
+    print("faster Countdown (decreasing sleeptime)")
+    seconds = getSleepTimeSecondsFromFile()
+    seconds = seconds - sleepTimeStepSize
+    if seconds < minimumSleepTime:
+        seconds = minimumSleepTime
+    writeSleepTimeSeconds(seconds)
 
 def activateCountdownBeforeTakingPicture():
     try:

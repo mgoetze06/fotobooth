@@ -106,6 +106,12 @@ function OnButtonClickToggleCountdown(){
 function OnButtonClickSetCountDownSleepTimeSeconds(){
   socket.emit('setCountDownSleepTimeSeconds', {data: document.getElementById('CountDownSleepTimeSeconds').innerHTML});
 }
+function IncreaseCountDownSleepTimeSeconds(){
+  socket.emit('increaseSleepTimeSeconds', {data: ""});
+}
+function DecreaseCountDownSleepTimeSeconds(){
+  socket.emit('decreaseSleepTimeSeconds', {data: ""});
+}
 
 
 function OnButtonClickGetValues(){

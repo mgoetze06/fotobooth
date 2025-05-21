@@ -241,13 +241,18 @@ def toggle_countdown(data):
 
 @socketio.on('setCountDownSleepTimeSeconds')
 def set_CountDownSleepTimeSeconds(data):
-
-    seconds = float(data["data"])
-    writeSleepTimeSeconds(seconds)
     seconds = getSleepTimeSecondsFromFile()
 
     emit("CountDownSleepTimeSeconds",{'CountDownSleepTimeSeconds': seconds})
 
+@socketio.on('increaseSleepTimeSeconds')
+def server_increaseSleepTimeSeconds(data):
+    increaseSleepTimeSeconds()
+    set_CountDownSleepTimeSeconds("")
+@socketio.on('decreaseSleepTimeSeconds')
+def server_decreaseSleepTimeSeconds(data):
+    decreaseSleepTimeSeconds()
+    set_CountDownSleepTimeSeconds("")
 
 @socketio.on('getvalues')
 def get_values(data):

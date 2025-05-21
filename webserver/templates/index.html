@@ -121,10 +121,15 @@
       </div>
       <div class="stat" onclick="OnButtonClickSetCountDownSleepTimeSeconds()">
         <p class="stat-header">Verzögerung</p>
-        <p class="stat-value bold" id="CountDownSleepTimeSeconds">{{countDownSleepTimeSeconds}}</p>
+        <p class="stat-value bold" id="CountDownSleepTimeSeconds">{{countDownSleepTimeSeconds}} s</p>
         
       </div>
-      <input style="width: 100%" type="range" min="0.03" max="0.3" class="slider" id="myRange">
+      <div class="stat" onclick="IncreaseCountDownSleepTimeSeconds()">
+        <p class="stat-header">Langsamer</p>
+      </div>
+      <div class="stat" onclick="DecreaseCountDownSleepTimeSeconds()">
+        <p class="stat-header">Schneller</p>
+      </div>
     </div>
     </div>
 
