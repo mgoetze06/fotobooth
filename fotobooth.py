@@ -16,7 +16,7 @@ from datetime import datetime
 import cv2
 import io
 import gphoto2 as gp
-from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled,getCountdownFromFile,getSleepTimeSecondsFromFile
+from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled,getCountdownFromFile,getSleepTimeSecondsFromFile,getShowSingleImageAlwaysWithOverlay
 
 
 LED_CHANNEL    = 0
@@ -558,6 +558,36 @@ def captureImage(camera):
         print("captureImage(): error capturing photo")
     return image
 
+def readOverlay():
+    directory = "/home/pi/programs/images/"
+    folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
+    filename = os.path.join(folder,"customcollage")
+    filename = os.path.join(filename,"overlay.png")
+    new_img= Image.open(filename)
+    return new_img
+
+def resizeImageToCanvasWithOverlay(pilImage,w,h):
+    try:
+        global overlayImage
+        if overlayImage is None:
+            overlayImage = readOverlay()
+        w = 1600
+        h = 1
+        imgWidth, imgHeight = pilImage.size
+        h = imgHeight
+        if imgWidth > w or imgHeight > h:
+            ratio = min(w/imgWidth, h/imgHeight)
+            imgWidth = int(imgWidth*ratio)
+            imgHeight = int(imgHeight*ratio)
+            image = pilImage.resize((imgWidth,imgHeight), Image.ANTIALIAS)
+        new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
+        new_img.paste(image, (round(scr_w/2-imgWidth/2),scr_h-imgHeight))
+        new_img.paste(overlayImage,(0,0),overlayImage)
+        pilImage = new_img
+    except:
+        print("error setting overlay image")
+    return pilImage
+
 def resizeImageToCanvas(pilImage,w,h):
     imgWidth, imgHeight = pilImage.size
     if imgWidth > w or imgHeight > h:
@@ -766,6 +796,20 @@ def getCountdownImageFromCounter(counter):
 
     return path
 
+def readRuediger():
+    path = "/home/pi/programs/countdown/ruediger.jpg"
+    return path
+
+def reactToRuedigerDisplayed():
+    global camera
+    resetGphoto2()
+    camera = cameraInit()
+    numberOfAttempts = 0
+    while camera == None and numberOfAttempts < 10:
+        time.sleep(5)
+        resetGphoto2()
+        camera = cameraInit()
+        numberOfAttempts += 1
 
 def creation_date(path_to_file):
 #"""
@@ -835,6 +879,12 @@ def checkAndCreateFolder(parent_path,new_folder):
 def readCountdownFromFile():
     try:
         return getCountdownFromFile()
+    except:
+        return False
+    
+def readShowSingleImageAlwaysWithOverlay():
+    try:
+        return getShowSingleImageAlwaysWithOverlay()
     except:
         return False
 
@@ -1006,14 +1056,20 @@ if __name__ == '__main__':
     pics_displayed = 0 #for collage display
     animation_breakpoint_counter = 0 
     camera = cameraInit()
+    overlayImage = readOverlay()
+    ruedigerDisplayed = False
+
     #showCountdown = readCountdownFromFile()
     showCountdownRefresher = 0
     while True:
         ignoreOtherEvents = False
         imagechanged = False
+        ignoreOverlay = True
         if showCountdownRefresher == 1000:
             showCountdownRefresher = 0
             showCountdown = readCountdownFromFile()
+            showSingleImageAlwaysWithOverlay = readShowSingleImageAlwaysWithOverlay()
+
         showCountdownRefresher += 1
         if animation_finished.is_set() and not ignoreOtherEvents:
             #imagepath = newImg()
@@ -1041,14 +1097,10 @@ if __name__ == '__main__':
                 newimage = True
             else:
                 print("BITTE NICHT SO NAH RAN RÜDIGER")
-                resetGphoto2()
-                camera = cameraInit()
-                numberOfAttempts = 0
-                while camera == None and numberOfAttempts < 10:
-                    time.sleep(10)
-                    resetGphoto2()
-                    camera = cameraInit()
-                    numberOfAttempts += 1
+                imagepath = readRuediger()
+                imagechanged = True
+                ruedigerDisplayed = True
+
 
 
         if first_button_pushed.is_set() and not picwait_displayed == True and not ignoreOtherEvents and not showCountdown:
@@ -1071,12 +1123,15 @@ if __name__ == '__main__':
         if gallery_update_event.is_set() and not ignoreOtherEvents:
             ignoreOtherEvents = True
             print("updating gallery")
+            ignoreOverlay = False
             imagepath = randImg(pics_displayed,show_last_two_photos,lastfile)
             lastfile = imagepath
             imagechanged = True
             pics_displayed += 1
             if pics_displayed == 5:
+                ignoreOverlay = True
                 pics_displayed = 0
+
         if imagechanged == True:
             imagechanged = False
             if not newimage:
@@ -1086,13 +1141,18 @@ if __name__ == '__main__':
                     imagepath = randImg(1,False)
                     pilImage = Image.open(imagepath)
 
-
-            pilImage = resizeImageToCanvas(pilImage,w,h)
+            if showSingleImageAlwaysWithOverlay and not ignoreOverlay:
+                pilImage = resizeImageToCanvasWithOverlay(pilImage,w,h)
+            else:
+                pilImage = resizeImageToCanvas(pilImage,w,h)
 
             #updateCanvas(pilImage,root,canvas)
             image = ImageTk.PhotoImage(pilImage)
             imagesprite = canvas.create_image(w/2,h/2,image=image)
             root.update()
             gallery_update_event.clear()
+            if ruedigerDisplayed:
+                reactToRuedigerDisplayed()
+                ruedigerDisplayed = False
             newimage = False
     

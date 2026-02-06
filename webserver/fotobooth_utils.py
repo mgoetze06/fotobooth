@@ -5,6 +5,7 @@ COLOR_FILE_NAME = "color.txt"
 PHOTOS_FILE_NAME = "photos.txt"
 COLLAGES_FILE_NAME = "collages.txt"
 COUNTDOWN_FILE_NAME = "countdown.txt"
+SHOW_SINGLEIMAGEOVERLAY_FILE_NAME = "singleImageOverlay.txt"
 SLEEPTIME_COUNTDOWN_FILE_NAME = "sleeptime.txt"
 WEBSERVER_FOLDER = "/home/pi/programs/webserver"
 
@@ -27,6 +28,20 @@ def getCountdownFromFile():
     except:
         return False
     
+def getShowSingleImageAlwaysWithOverlay():
+    try:
+        f = open(getFilenameWithRespectToWebserverDirectory(SHOW_SINGLEIMAGEOVERLAY_FILE_NAME), "r") 
+        lines = f.readlines()
+        textFromFile = lines[0].replace("\n","").split("singleImageOverlay: ")[1]
+        f.close()
+
+        if "in" in textFromFile:
+            return False
+        else:
+            return True
+
+    except:
+        return False
 
 def getSleepTimeSecondsFromFile():
     try:
