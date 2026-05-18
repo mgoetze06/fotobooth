@@ -627,46 +627,32 @@ def getNewImageName():
     return newname
 
 def captureImage(camera):
-    if camera is None and gp is not None:
+    if not camera:
         camera = cameraInit()
 
-    newname = getNewImageName()
-    if camera is not None and gp is not None:
-        try:
-            logger.info('Capturing image using libgphoto2')
-            file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
-            logger.info('Camera file path: %s/%s', file_path.folder, file_path.name)
-            camera_file = camera.file_get(file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
-            camera_file.save(newname)
-            if is_valid_image(newname):
-                return convertCameraFileToPIL(camera_file)
-            logger.warning('libgphoto2 capture succeeded but image file is invalid: %s', newname)
-        except Exception as ex:
-            logger.warning('captureImage(): libgphoto2 capture failed: %s', ex)
+    image = None
+    try:
+        print('Capturing image using pythongphoto')
+        newname = getNewImageName()
+        file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
+        print('Camera file path: {0}/{1}'.format(file_path.folder, file_path.name))
+        #target = os.path.join('/tmp', file_path.name)
+        #print('Copying image to', target)
+        camera_file = camera.file_get(file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
+        camera_file.save(newname)
+        image = convertCameraFileToPIL(camera_file)
+    except:
+        print("captureImage(): error capturing photo")
+    return image
 
-    for attempt in range(1, 4):
-        try:
-            logger.info('Attempting gphoto2 CLI capture, attempt %s', attempt)
-            subprocess.check_call(["gphoto2", "--capture-image-and-download", "--filename", newname, "--force-overwrite"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if is_valid_image(newname):
-                with Image.open(newname) as img:
-                    return img.copy()
-            logger.warning('CLI capture succeeded but image file is invalid: %s', newname)
-        except Exception as ex2:
-            logger.warning('captureImage(): CLI capture attempt %s failed: %s', attempt, ex2)
-            time.sleep(1)
-            resetGphoto2()
-    logger.error('captureImage(): all capture attempts failed')
-    return None
-
-def readOverlay():
+def readOverlay(filename_without_path):
     try:
         directory = "/home/pi/programs/images/"
         subfolders = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
         if not subfolders:
             raise FileNotFoundError('No image folders found')
         folder = max([os.path.join(directory, d) for d in subfolders], key=os.path.getmtime)
-        filename = os.path.join(folder, "customcollage", "overlay.png")
+        filename = os.path.join(folder, "customcollage", filename_without_path)
         return Image.open(filename)
     except Exception as ex:
         logger.warning("readOverlay(): overlay file not available: %s", ex)
@@ -1126,7 +1112,7 @@ if __name__ == '__main__':
     def display_image(pilImage, use_overlay):
         try:
             if use_overlay:
-                pilImage = resizeImageToCanvasWithOverlay(pilImage, w, h)
+                pilImage = resizeImageToCanvasWithOverlay(pilImage, w, h, "overlay.png")
             else:
                 pilImage = resizeImageToCanvas(pilImage, w, h)
         except Exception as ex:
