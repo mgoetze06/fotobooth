@@ -1,22 +1,70 @@
-import RPi.GPIO as GPIO
+import logging
+try:
+    import RPi.GPIO as GPIO
+except Exception as ex:
+    GPIO = None
+    logging.warning("RPi.GPIO unavailable: %s", ex)
+
 import tkinter as tk
 from PIL import Image, ImageTk
 import multiprocessing
 import time
 import os, random, shutil
-from luma.core.interface.serial import i2c
-from luma.core.render import canvas
-from luma.oled.device import sh1106
-import _rpi_ws281x as ws
 import subprocess
 from subprocess import check_output
 import psutil
-from gpiozero import CPUTemperature
+try:
+    from gpiozero import CPUTemperature
+except Exception as ex:
+    CPUTemperature = None
+    print("gpiozero unavailable: {}".format(ex))
 from datetime import datetime
 import cv2
 import io
-import gphoto2 as gp
+try:
+    import gphoto2 as gp
+except Exception as ex:
+    gp = None
+    logging.warning("gphoto2 library unavailable: %s", ex)
 from webserver.fotobooth_utils import writeImagecountToFile,writeCollageCountToFile,readRGBFromFile,IsCustomCollageEnabled,getCountdownFromFile,getSleepTimeSecondsFromFile,getShowSingleImageAlwaysWithOverlay
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
+
+ENABLE_OLED = True
+ENABLE_WLED = True
+OLED_DEVICE = None
+ws = None
+leds = None
+channel = None
+
+def try_init_oled():
+    global OLED_DEVICE
+    try:
+        from luma.core.interface.serial import i2c
+        from luma.core.render import canvas
+        from luma.oled.device import sh1106
+        serial = i2c(port=1, address=0x3C)
+        OLED_DEVICE = sh1106(serial)
+        return True
+    except Exception as ex:
+        logger.warning("OLED disabled: %s", ex)
+        OLED_DEVICE = None
+        return False
+
+
+def try_init_wled():
+    global ws, leds, channel
+    try:
+        import _rpi_ws281x as _ws
+        ws = _ws
+        leds = ws.new_ws2811_t()
+        return True
+    except Exception as ex:
+        logger.warning("WLED disabled: %s", ex)
+        ws = None
+        leds = None
+        return False
 
 
 LED_CHANNEL    = 0
@@ -49,76 +97,85 @@ DOT_COLORS = [0x922b21,
 
         
 def update_oled(e):
+    if not ENABLE_OLED or OLED_DEVICE is None:
+        logger.info("OLED disabled, OLED process will sleep.")
+        while True:
+            time.sleep(1)
+
     iteration = 0
     photo_count = 0
     updated = False
-    print("updating oled process started. Waiting for update events")
+    logger.info("updating oled process started. Waiting for update events")
     try:
         with open('/home/pi/programs/log_backup.txt', 'r') as f:
             lastbackup = f.read()
-            f.close()
-    except:
+    except Exception:
         lastbackup = ""
 
+    from luma.core.render import canvas
 
     while True:
         if animation_finished.is_set() and updated == False:
             photo_count += 1
             updated = True
-            with canvas(device) as draw:
-                draw.rectangle(device.bounding_box, outline="white", fill="black")
+            with canvas(OLED_DEVICE) as draw:
+                draw.rectangle(OLED_DEVICE.bounding_box, outline="white", fill="black")
                 draw.text((10, 4), "heute aufgenommen: ", fill=1)
-                draw.text((50, 30), str(photo_count), fill=1) #(horizontal von links, vertikal von oben)
+                draw.text((50, 30), str(photo_count), fill=1)
             try:
                 writeImagecountToFile(photo_count)
-            except:
-                pass
+            except Exception as ex:
+                logger.warning("update_oled(): writeImagecountToFile failed: %s", ex)
                 
         if not animation_finished.is_set():
             updated = False
             
         if e.is_set():
             print("update oled")
-            with canvas(device) as draw:
-                    draw.rectangle(device.bounding_box, outline="white", fill="black")
-                    if iteration == 5:
-                        
-                        draw.text((10, 4), "heute aufgenommen: ", fill=1)
-                        draw.text((50, 26), str(photo_count), fill=1) #(horizontal von links, vertikal von oben)
+            with canvas(OLED_DEVICE) as draw:
+                draw.rectangle(OLED_DEVICE.bounding_box, outline="white", fill="black")
+                if iteration == 5:
+                    draw.text((10, 4), "heute aufgenommen: ", fill=1)
+                    draw.text((50, 26), str(photo_count), fill=1)
 
+                if iteration == 1:
+                    draw.text((3, 26), "party-fotobox@web.de", fill=1)
 
-                    
-                    if iteration == 1:
-                        draw.text((3, 26), "party-fotobox@web.de", fill=1)
-                        
-                    if iteration == 2:
+                if iteration == 2:
+                    if CPUTemperature is not None:
                         cpu = CPUTemperature()
                         load = round((cpu.temperature/85)*100,2)
                         draw.text((6, 4), "CPU Temperatur: ", fill=1)
                         draw.text((50, 16), str(round(cpu.temperature,2)) +" °C", fill=1)
                         draw.text((6, 28), "CPU Load Percentage: ", fill=1)
-                        draw.text((50, 40), str(load) +" %", fill=1) 
-                    if iteration == 3:
-                        disk = psutil.disk_usage('/')
-                        disk_free = round((disk.free /2**30),2)
-                        disk_total = round((disk.total /2**30),2)
-                        disk_percentage = round((disk_free /disk_total)*100)
-                        draw.text((6, 4), "Freier Speicher: ", fill=1)
-                        draw.text((20, 16), str(disk_free) +" GB ("+str(disk_percentage)+"%)", fill=1)
-                        draw.text((6, 28), "Gesamtspeicher: ", fill=1)
-                        draw.text((20, 40), str(disk_total) +" GB", fill=1) 
-                    if iteration == 4:
-                        draw.text((10, 4), "Last Backup: ", fill=1)
-                        draw.text((10, 26), lastbackup, fill=1)
-                    if iteration == 0:
-                        try:
-                            ssid = subprocess.check_output(['iwgetid']).decode()
-                            ip = check_output(['hostname', '-I'])
-                        except:
-                            ssid = "FOTOBOX"
-                            ip = ""
-                        draw.text((10, 4), ssid, fill=1)
-                        draw.text((10, 26), ip, fill=1) 
+                        draw.text((50, 40), str(load) +" %", fill=1)
+                    else:
+                        draw.text((6, 4), "CPU Temperatur: n/a", fill=1)
+
+                if iteration == 3:
+                    disk = psutil.disk_usage('/')
+                    disk_free = round((disk.free /2**30),2)
+                    disk_total = round((disk.total /2**30),2)
+                    disk_percentage = round((disk_free /disk_total)*100)
+                    draw.text((6, 4), "Freier Speicher: ", fill=1)
+                    draw.text((20, 16), str(disk_free) +" GB ("+str(disk_percentage)+"%)", fill=1)
+                    draw.text((6, 28), "Gesamtspeicher: ", fill=1)
+                    draw.text((20, 40), str(disk_total) +" GB", fill=1)
+
+                if iteration == 4:
+                    draw.text((10, 4), "Last Backup: ", fill=1)
+                    draw.text((10, 26), lastbackup, fill=1)
+
+                if iteration == 0:
+                    try:
+                        ssid = subprocess.check_output(['iwgetid']).decode().strip()
+                        ip = check_output(['hostname', '-I']).decode().strip()
+                    except Exception as ex:
+                        logger.warning("update_oled(): network info unavailable: %s", ex)
+                        ssid = "FOTOBOX"
+                        ip = ""
+                    draw.text((10, 4), ssid, fill=1)
+                    draw.text((10, 26), ip, fill=1)
             e.clear()
             iteration += 1
         else:
@@ -145,7 +202,8 @@ def createQuadraticCollage(size,imagepaths,folder):
     try:
         r,g,b = readRGBFromFile()
         new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(r,g,b))
-    except:
+    except Exception as ex:
+        logger.warning("createQuadraticCollage(): failed to read RGB, using black background: %s", ex)
         new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
 
     if len(files) < (size*size):
@@ -153,7 +211,8 @@ def createQuadraticCollage(size,imagepaths,folder):
     
     try:
         new_img = new_img.resize((scr_w,scr_h))
-    except:
+    except Exception as ex:
+        logger.warning("createQuadraticCollage(): resize fallback used: %s", ex)
         new_img = new_img.resize((scr_w,scr_h),Image.ANTIALIAS)
     ims = []
     thumbnail_height = round(scr_h/rows)
@@ -161,13 +220,15 @@ def createQuadraticCollage(size,imagepaths,folder):
     for i in range(0,4):
         try:
             randchoice = random.choice(imagepaths)
-        except:
+        except Exception as ex:
+            logger.warning("createQuadraticCollage(): no random image choice available: %s", ex)
             return None
         filename = folder + "/" + randchoice
         while (filename == folder + "/collages") or (filename == folder + "/customcollage") or (filename in currentUsedPhotosInCollageList):
             try:
                 randchoice = random.choice(imagepaths)
-            except:
+            except Exception as ex:
+                logger.warning("createQuadraticCollage(): failed to choose next image: %s", ex)
                 return None
             filename = folder + "/" + randchoice
         currentUsedPhotosInCollageList.append(filename)
@@ -201,7 +262,8 @@ def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
         filename = os.path.join(folder,"customcollage")
         filename = os.path.join(filename,"custom.jpg")
         new_img= Image.open(filename)
-    except:
+    except Exception as ex:
+        logger.warning("createCustomCollageWithThreeImagesOnRightSide(): custom collage file unavailable: %s", ex)
         new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
     ims = []
     stackedrows = 3
@@ -212,13 +274,15 @@ def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
     for i in range(0,stackedrows):
         try:
             randchoice = random.choice(imagepaths)
-        except:
+        except Exception as ex:
+            logger.warning("createCustomCollageWithThreeImagesOnRightSide(): no random image choice available: %s", ex)
             return None
         filename = folder + "/" + randchoice
         while (filename == folder + "/collages") or (filename == folder + "/customcollage") or (filename in currentUsedPhotosInCollageList):
             try:
                 randchoice = random.choice(imagepaths)
-            except:
+            except Exception as ex:
+                logger.warning("createCustomCollageWithThreeImagesOnRightSide(): failed to choose next image: %s", ex)
                 return None
             filename = folder + "/" + randchoice
         currentUsedPhotosInCollageList.append(filename)
@@ -227,7 +291,8 @@ def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
         thumbnail_width = round((image.width * sizefactor)/stackedrows)
         try:
             image = image.resize((thumbnail_width,thumbnail_height)) 
-        except:
+        except Exception as ex:
+            logger.warning("createCustomCollageWithThreeImagesOnRightSide(): resize fallback used: %s", ex)
             image = image.resize((thumbnail_width,thumbnail_height),Image.ANTIALIAS)
         ims.append(image)
     i = 0
@@ -247,61 +312,49 @@ def update_gallery(e): #collage process
     while True:
         if e.is_set():
             e.clear()
-            print("try to create collage")
+            logger.info("try to create collage")
             directory = "/home/pi/programs/images/"
-            folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
-            
+            try:
+                subfolders = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
+                folder = max([os.path.join(directory,d) for d in subfolders], key=os.path.getmtime)
+            except Exception as ex:
+                logger.warning("update_gallery(): cannot find latest image folder: %s", ex)
+                time.sleep(1)
+                continue
             files = folders = 0
             for _, dirnames, filenames in os.walk(folder):
               # ^ this idiom means "we won't be using this value"
                 files += len(filenames)
                 folders += len(dirnames)
-            #print(files)
             if files > 3:
-                imglist = []
-                os.chdir(folder)
-                imglist = os.listdir(os.getcwd())
-                #try:
-                if mode == 0:
-                    new_img = createQuadraticCollage(2,imglist,folder)
-                else:
-                    if mode == 1:
-                        if IsCustomCollageEnabled(folder):
-                            new_img = createCustomCollageWithThreeImagesOnRightSide(imglist,folder)
-                        else:
-                            new_img = createQuadraticCollage(2,imglist,folder)
-                if new_img:
-                    if not os.path.exists(folder + "/collages/"):
-                        os.makedirs(folder + "/collages/")
-                        
-                    if collagenumber < 10:
-                        name = folder + "/collages/collage-000" + str(collagenumber) + ".jpg"
+                imglist = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+                try:
+                    if mode == 0:
+                        new_img = createQuadraticCollage(2,imglist,folder)
+                    elif mode == 1 and IsCustomCollageEnabled(folder):
+                        new_img = createCustomCollageWithThreeImagesOnRightSide(imglist,folder)
                     else:
-                        if collagenumber < 100:
-                            name = folder + "/collages/collage-00" + str(collagenumber) + ".jpg"
-                        else:
-                            if collagenumber < 1000:
-                                name = folder + "/collages/collage-0" + str(collagenumber) + ".jpg"
-                            else:                          
-                                name = folder + "/collages/collage-" + str(collagenumber) + ".jpg"
-
-                    new_img.save(name,'JPEG')
-                    collagenumber += 1
-                    #except:
-                    #    print("update_gallery(): error creating collage")
-
+                        new_img = createQuadraticCollage(2,imglist,folder)
+                except Exception as ex:
+                    logger.warning("update_gallery(): collage creation failed: %s", ex)
+                    new_img = None
+                if new_img:
+                    collages_folder = os.path.join(folder, "collages")
+                    os.makedirs(collages_folder, exist_ok=True)
+                    name = os.path.join(collages_folder, "collage-{0:04d}.jpg".format(collagenumber))
+                    try:
+                        new_img.save(name, 'JPEG')
+                        collagenumber += 1
+                    except Exception as ex:
+                        logger.warning("update_gallery(): failed saving collage: %s", ex)
                     try:
                         writeCollageCountToFile(collagenumber)
-                    except:
-                        pass
-                    mode += 1
-                    if mode > 1:
-                        mode = 0
+                    except Exception as ex:
+                        logger.warning("update_gallery(): writeCollageCountToFile failed: %s", ex)
+                    mode = (mode + 1) % 2
                 time.sleep(60)
-            print("not enough images for collage in folder:",folder)
-            
-           #e.clear()
-
+            else:
+                logger.info("not enough images for collage in folder: %s", folder)
         else:
             time.sleep(0.2)
         
@@ -397,14 +450,14 @@ def take_photo(e):
 def startWebserver():
     try:
         subprocess.Popen(["python","./webserver/fotobooth_webserver.py"],cwd="/home/pi/programs")
-
-    except:
-        pass
+    except Exception as ex:
+        logger.warning("startWebserver(): failed to start webserver: %s", ex)
 
 def readSleepTimeSecondsFromFile():
     try:
         return getSleepTimeSecondsFromFile()
-    except:
+    except Exception as ex:
+        logger.warning("readSleepTimeSecondsFromFile(): %s", ex)
         return 0.1
 
 def led_countdown(e): #e is first button pushed
@@ -453,6 +506,36 @@ def led_countdown(e): #e is first button pushed
             time.sleep(wait)
     sleepTimeRefresher = 0
     sleepTimeSeconds = readSleepTimeSecondsFromFile()
+
+    if not ENABLE_WLED or ws is None or channel is None:
+        print("WLED disabled, led_countdown will simulate button flow.")
+        while True:
+            sleepTimeRefresher += 1
+            if sleepTimeRefresher == 500:
+                sleepTimeRefresher = 0
+                sleepTimeSeconds = readSleepTimeSecondsFromFile()
+                print("Updating sleeptime to: ",sleepTimeSeconds)
+
+            if e.is_set() and not animation_finished.is_set():
+                print('simulating countdown without WLED...')
+                if offset == LED_COUNT//3 or offset == 0 or offset == 2*LED_COUNT//3:
+                    print("setting animation breakpoint")
+                    animation_breakpoint.set()
+                    time.sleep(sleepTimeSeconds)
+                offset += 1
+                print("offset: ",offset)
+                time.sleep(sleepTimeSeconds)
+                if offset == LED_COUNT + 1:
+                    offset = 0
+                    animation_breakpoint.set()
+                    animation_finished.set()
+                    animation_breakpoint.clear()
+                    offset_idle = round(LED_COUNT/4)
+                    first_button_pushed.clear()
+                    time.sleep(4)
+            else:
+                time.sleep(0.1)
+        # end simulated WLED loop
 
     while True:
         sleepTimeRefresher += 1
@@ -525,6 +608,8 @@ def led_countdown(e): #e is first button pushed
                 rainbow_cycle(0.000000001)
 
 def convertCameraFileToPIL(camera_file):
+    if gp is None:
+        raise RuntimeError('libgphoto2 Python bindings are unavailable')
     file_data = gp.check_result(gp.gp_file_get_data_and_size(camera_file))
     image_io = io.BytesIO(file_data)
     image = Image.open(image_io)
@@ -540,31 +625,51 @@ def getNewImageName():
     return newname
 
 def captureImage(camera):
-    if not camera:
+    if camera is None and gp is not None:
         camera = cameraInit()
 
-    image = None
-    try:
-        print('Capturing image using pythongphoto')
-        newname = getNewImageName()
-        file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
-        print('Camera file path: {0}/{1}'.format(file_path.folder, file_path.name))
-        #target = os.path.join('/tmp', file_path.name)
-        #print('Copying image to', target)
-        camera_file = camera.file_get(file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
-        camera_file.save(newname)
-        image = convertCameraFileToPIL(camera_file)
-    except:
-        print("captureImage(): error capturing photo")
-    return image
+    newname = getNewImageName()
+    if camera is not None and gp is not None:
+        try:
+            logger.info('Capturing image using libgphoto2')
+            file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
+            logger.info('Camera file path: %s/%s', file_path.folder, file_path.name)
+            camera_file = camera.file_get(file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
+            camera_file.save(newname)
+            if is_valid_image(newname):
+                return convertCameraFileToPIL(camera_file)
+            logger.warning('libgphoto2 capture succeeded but image file is invalid: %s', newname)
+        except Exception as ex:
+            logger.warning('captureImage(): libgphoto2 capture failed: %s', ex)
+
+    for attempt in range(1, 4):
+        try:
+            logger.info('Attempting gphoto2 CLI capture, attempt %s', attempt)
+            subprocess.check_call(["gphoto2", "--capture-image-and-download", "--filename", newname, "--force-overwrite"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if is_valid_image(newname):
+                with Image.open(newname) as img:
+                    return img.copy()
+            logger.warning('CLI capture succeeded but image file is invalid: %s', newname)
+        except Exception as ex2:
+            logger.warning('captureImage(): CLI capture attempt %s failed: %s', attempt, ex2)
+            time.sleep(1)
+            resetGphoto2()
+    logger.error('captureImage(): all capture attempts failed')
+    return None
 
 def readOverlay():
-    directory = "/home/pi/programs/images/"
-    folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
-    filename = os.path.join(folder,"customcollage")
-    filename = os.path.join(filename,"overlay.png")
-    new_img= Image.open(filename)
-    return new_img
+    try:
+        directory = "/home/pi/programs/images/"
+        subfolders = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
+        if not subfolders:
+            raise FileNotFoundError('No image folders found')
+        folder = max([os.path.join(directory, d) for d in subfolders], key=os.path.getmtime)
+        filename = os.path.join(folder, "customcollage", "overlay.png")
+        return Image.open(filename)
+    except Exception as ex:
+        logger.warning("readOverlay(): overlay file not available: %s", ex)
+        return None
+
 
 def resizeImageToCanvasWithOverlay(pilImage,w,h):
     try:
@@ -572,21 +677,21 @@ def resizeImageToCanvasWithOverlay(pilImage,w,h):
         if overlayImage is None:
             overlayImage = readOverlay()
         w = 1600
-        h = 1
         imgWidth, imgHeight = pilImage.size
-        h = imgHeight
-        if imgWidth > w or imgHeight > h:
-            ratio = min(w/imgWidth, h/imgHeight)
+        image = pilImage
+        if imgWidth > w:
+            ratio = min(w/imgWidth, 1)
             imgWidth = int(imgWidth*ratio)
             imgHeight = int(imgHeight*ratio)
             image = pilImage.resize((imgWidth,imgHeight), Image.ANTIALIAS)
-        new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
-        new_img.paste(image, (round(scr_w/2-imgWidth/2),scr_h-imgHeight))
-        new_img.paste(overlayImage,(0,0),overlayImage)
-        pilImage = new_img
-    except:
-        print("error setting overlay image")
-    return pilImage
+        new_img = Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
+        new_img.paste(image, (round(scr_w/2-imgWidth/2), scr_h-imgHeight))
+        if overlayImage is not None:
+            new_img.paste(overlayImage,(0,0),overlayImage)
+        return new_img
+    except Exception as ex:
+        logger.warning("error setting overlay image: %s", ex)
+        return pilImage
 
 def resizeImageToCanvas(pilImage,w,h):
     imgWidth, imgHeight = pilImage.size
@@ -598,52 +703,47 @@ def resizeImageToCanvas(pilImage,w,h):
 
         try:
             r,g,b = readRGBFromFile()
-            new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(r,g,b))
+            new_img = Image.new(mode="RGB", size=(scr_w,scr_h), color=(r,g,b))
             new_img.paste(pilImage, (round(scr_w/2-imgWidth/2),0))
             pilImage = new_img
-        except:
-            print("error setting background")
+        except Exception as ex:
+            logger.warning("error setting background: %s", ex)
     return pilImage
 
 def cameraInit():
     subprocess.Popen(["pkill", "-f", "gphoto2"])
+    if gp is None:
+        logger.warning('cameraInit(): libgphoto2 Python bindings unavailable, skipping camera init')
+        return None
     try:
         camera = gp.check_result(gp.gp_camera_new())
         gp.check_result(gp.gp_camera_init(camera))
-    except:
-        print("cameraInit(): error initializing camera")
+    except Exception as ex:
+        logger.warning("cameraInit(): error initializing camera: %s", ex)
         return None
-    # required configuration will depend on camera type!
-    print('Checking camera config')
-    # get configuration tree
+    logger.info('Checking camera config')
     try:
         config = gp.check_result(gp.gp_camera_get_config(camera))
-    except:
-        print("cameraInit(): error getting camera config")
+    except Exception as ex:
+        logger.warning("cameraInit(): error getting camera config: %s", ex)
         return None
-    # find the image format config item
-    # camera dependent - 'imageformat' is 'imagequality' on some
     OK, image_format = gp.gp_widget_get_child_by_name(config, 'imageformat')
     if OK >= gp.GP_OK:
-        # get current setting
         value = gp.check_result(gp.gp_widget_get_value(image_format))
-        # make sure it's not raw
         if 'raw' in value.lower():
-            print('Cannot preview raw images')
-            exit
+            logger.warning('Cannot preview raw images')
+            return None
     # find the capture size class config item
     # need to set this on my Canon 350d to get preview to work at all
     OK, capture_size_class = gp.gp_widget_get_child_by_name(
         config, 'capturesizeclass')
     if OK >= gp.GP_OK:
-        # set value
-        print("setting capture size class")
+        logger.info("setting capture size class")
         value = gp.check_result(gp.gp_widget_get_choice(capture_size_class, 4))
         gp.check_result(gp.gp_widget_set_value(capture_size_class, value))
-        # set config
         gp.check_result(gp.gp_camera_set_config(camera, config))
     else:
-        print("error setting capture size class")
+        logger.warning("error setting capture size class")
 
     #setCameraConfig(camera,'output',0)
     # capture preview image (not saved to camera memory card)
@@ -654,11 +754,13 @@ def cameraInit():
 def listImages():
     global imglist
     global folder
-    os.chdir(folder)
-    #imglist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
-    imglist = [f for f in os.listdir(os.getcwd()) if os.path.isfile(os.path.join(folder, f))]
-    if len(imglist)>1:
-        imglist = sorted(imglist, key=os.path.getmtime)
+    try:
+        imglist = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+        if len(imglist) > 1:
+            imglist = sorted(imglist, key=lambda f: os.path.getmtime(os.path.join(folder, f)))
+    except Exception as ex:
+        logger.warning("listImages(): failed to list images in %s: %s", folder, ex)
+        imglist = []
     #print("listimages: ",imglist)
     #oldest = files[0]
     #newest = files[-1]
@@ -676,60 +778,49 @@ def randImg(pics_displayed,show_last_two_photos_local,lastfile):
         print("no file found")
         myimage = "/home/pi/programs/countdown/picwait.jpg"
     else:
-        if pics_displayed == 4 and os.path.exists(folder + "/collages/"):
-            #display Collage
-            print("displaying collage")
-            os.chdir(folder + "/collages/")
-            collagelist = sorted(os.listdir(os.getcwd()), key=os.path.getmtime)
+        if pics_displayed == 4 and os.path.exists(os.path.join(folder, "collages")):
+            logger.info("displaying collage")
+            collages_folder = os.path.join(folder, "collages")
             try:
+                collagelist = [f for f in os.listdir(collages_folder) if os.path.isfile(os.path.join(collages_folder, f))]
+                collagelist = sorted(collagelist, key=lambda f: os.path.getmtime(os.path.join(collages_folder, f)))
                 myimage = random.choice(collagelist)
-                print(myimage)
-            except:
-                print("randImg(): error accessing existing collages")
+                myimage = os.path.join(collages_folder, myimage)
+                logger.info("Selected collage: %s", myimage)
+            except Exception as ex:
+                logger.warning("randImg(): error accessing existing collages: %s", ex)
+                myimage = "/home/pi/programs/countdown/picwait.jpg"
             
         else:
-            if pics_displayed < 3  and len(imglist) > 2 and show_last_two_photos == True:
-                #display last two images
-                print("displaying gallery after new foto")
-                #if len(imglist) > 2:
-                    
+            if pics_displayed < 3 and len(imglist) > 2 and show_last_two_photos:
+                logger.info("displaying gallery after new photo")
                 index = (-1 * (pics_displayed + 1)) - 1
-                print(index)
                 if index > -4:
                     myimage = imglist[index]
-                    while(myimage == "collages"):
-                        #myimage = random.choice(os.listdir(self.imagepath))
+                    while myimage == "collages":
                         index -= 1
+                        if index < -len(imglist):
+                            break
                         myimage = imglist[index]
-                        print(myimage)
                 else:
                     myimage = imglist[-1]
                     show_last_two_photos = False
-                myimage = folder + "/" + myimage
-                print(myimage)
-                #else:
-                    
+                myimage = os.path.join(folder, myimage)
+                logger.info("Selected recent image: %s", myimage)
             else:
-                #random image
                 try:
                     myimage = random.choice(imglist)
-                except:
+                except Exception:
                     myimage = "/home/pi/programs/countdown/picwait.jpg"
-
-                
                 while (myimage == lastfile) or (myimage == "collages"):
-                    #myimage = random.choice(os.listdir(self.imagepath))
                     try:
                         myimage = random.choice(imglist)
-                    except:
+                    except Exception:
                         myimage = "/home/pi/programs/countdown/picwait.jpg"
-
                 lastfile = myimage
                 if "picwait" not in myimage:
-                    myimage = folder + "/" + myimage
-                print("random image")
-                print(myimage)
-                print(show_last_two_photos)
+                    myimage = os.path.join(folder, myimage)
+                logger.info("Selected random image: %s", myimage)
                 show_last_two_photos = False
     return myimage
 
@@ -739,45 +830,36 @@ def newImg():
     try:
         debug = True
         listImages()
+        if not imglist:
+            raise FileNotFoundError('No images available')
         myimage = imglist[-1]
-        
         now = datetime.now()
         if debug:
-            print("now: ",now)
-            print(myimage)
+            logger.info("now: %s", now)
+            logger.info("latest image: %s", myimage)
         image_date = myimage.split("IMG-")[1].split(".jpg")[0]
-        image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
+        image_date_astime = datetime.strptime(image_date, "%Y%m%d-%H%M%S")
         if debug:
-            print("image: ",image_date_astime)
+            logger.info("image datetime: %s", image_date_astime)
         failedCounter = 0
         while (now - image_date_astime).total_seconds() > 15:
             if debug:
-                print((now - image_date_astime).total_seconds())
-                print("image too old")
-                failedCounter += 1
-                if failedCounter > 10:
-                    raise FileNotFoundError
+                logger.info("image too old: %s", (now - image_date_astime).total_seconds())
+            failedCounter += 1
+            if failedCounter > 10:
+                raise FileNotFoundError
             time.sleep(0.5)
             listImages()
+            if not imglist:
+                raise FileNotFoundError('No images available')
             myimage = imglist[-1]
-            
             now = datetime.now()
-            if debug:
-                print("now: ",now)
             image_date = myimage.split("IMG-")[1].split(".jpg")[0]
-            image_date_astime = datetime.strptime(image_date,"%Y%m%d-%H%M%S")
-            if debug:
-                print("image: ",image_date_astime)
-
-        
-        #newname = folder + "/IMG-" + now.strftime("%Y%m%d-%H%M%S") + ".jpg"
-        
-        #myimage = "/home/pi/programs/newimage/new.jpg"
-        print(myimage)
+            image_date_astime = datetime.strptime(image_date, "%Y%m%d-%H%M%S")
+        logger.info("Returning new image: %s", myimage)
         return myimage
-    except:
-        print("Fetching new Image failed.")
-        print("Returning Wait-Image.")
+    except Exception as ex:
+        logger.warning("newImg(): %s", ex)
         return "/home/pi/programs/countdown/picwait.jpg"
 
 def getCountdownImageFromCounter(counter):
@@ -879,139 +961,110 @@ def checkAndCreateFolder(parent_path,new_folder):
 def readCountdownFromFile():
     try:
         return getCountdownFromFile()
-    except:
+    except Exception as ex:
+        logger.warning("readCountdownFromFile(): %s", ex)
         return False
     
 def readShowSingleImageAlwaysWithOverlay():
     try:
         return getShowSingleImageAlwaysWithOverlay()
-    except:
+    except Exception as ex:
+        logger.warning("readShowSingleImageAlwaysWithOverlay(): %s", ex)
         return False
 
 if __name__ == '__main__':
-    
-    
-    leds = ws.new_ws2811_t()
+    oled_available = try_init_oled()
+    wled_available = try_init_wled()
 
-    # Initialize all channels to off
-    for channum in range(2):
-        channel = ws.ws2811_channel_get(leds, channum)
-        ws.ws2811_channel_t_count_set(channel, 0)
-        ws.ws2811_channel_t_gpionum_set(channel, 0)
-        ws.ws2811_channel_t_invert_set(channel, 0)
-        ws.ws2811_channel_t_brightness_set(channel, 0)
+    if wled_available:
+        leds = ws.new_ws2811_t()
 
-    channel = ws.ws2811_channel_get(leds, LED_CHANNEL)
+        # Initialize all channels to off
+        for channum in range(2):
+            channel = ws.ws2811_channel_get(leds, channum)
+            ws.ws2811_channel_t_count_set(channel, 0)
+            ws.ws2811_channel_t_gpionum_set(channel, 0)
+            ws.ws2811_channel_t_invert_set(channel, 0)
+            ws.ws2811_channel_t_brightness_set(channel, 0)
 
-    ws.ws2811_channel_t_count_set(channel, LED_COUNT)
-    ws.ws2811_channel_t_gpionum_set(channel, LED_GPIO)
-    ws.ws2811_channel_t_invert_set(channel, LED_INVERT)
-    ws.ws2811_channel_t_brightness_set(channel, LED_BRIGHTNESS)
+        channel = ws.ws2811_channel_get(leds, LED_CHANNEL)
+        ws.ws2811_channel_t_count_set(channel, LED_COUNT)
+        ws.ws2811_channel_t_gpionum_set(channel, LED_GPIO)
+        ws.ws2811_channel_t_invert_set(channel, LED_INVERT)
+        ws.ws2811_channel_t_brightness_set(channel, LED_BRIGHTNESS)
 
-    ws.ws2811_t_freq_set(leds, LED_FREQ_HZ)
-    ws.ws2811_t_dmanum_set(leds, LED_DMA_NUM)
+        ws.ws2811_t_freq_set(leds, LED_FREQ_HZ)
+        ws.ws2811_t_dmanum_set(leds, LED_DMA_NUM)
 
-    # Initialize library with LED configuration.
-    resp = ws.ws2811_init(leds)
-    if resp != 0:
-        raise RuntimeError('ws2811_init failed with code {0}'.format(resp))
+        resp = ws.ws2811_init(leds)
+        if resp != 0:
+            print('ws2811_init failed with code {0}'.format(resp))
+            wled_available = False
+            leds = None
+            channel = None
+    else:
+        print('Skipping WLED initialization because hardware is unavailable.')
 
-    # initialize GPIO buttons
-    #capture button
-    GPIO.setmode(GPIO.BCM)
-    button1_pin = 23
-    GPIO.setup(button1_pin, GPIO.IN)
-    
-    #Button Backup
-    button2_pin = 24
-    GPIO.setup(button2_pin, GPIO.IN)
-    #LED Backup
-    led_pin = 25
-    GPIO.setup(led_pin, GPIO.OUT)
-    #Backup VCC
-    backup_vcc = 8
-    GPIO.setup(backup_vcc, GPIO.OUT)
-    GPIO.output(backup_vcc,1)
-    
-    
+    if GPIO is not None:
+        GPIO.setmode(GPIO.BCM)
+        button1_pin = 23
+        GPIO.setup(button1_pin, GPIO.IN)
+        button2_pin = 24
+        GPIO.setup(button2_pin, GPIO.IN)
+        led_pin = 25
+        GPIO.setup(led_pin, GPIO.OUT)
+        backup_vcc = 8
+        GPIO.setup(backup_vcc, GPIO.OUT)
+        GPIO.output(backup_vcc, 1)
+    else:
+        print('Skipping GPIO setup because RPi.GPIO is unavailable.')
+
     try:
         with open('/home/pi/programs/log_backup.txt', 'r') as f:
             lastbackup = f.read()
-            f.close()
-    except:
-        print("no backup file found")
+    except Exception as ex:
+        logger.warning("no backup file found: %s", ex)
 
-    #waiting for i2c service to start
-    #time.sleep(15)
-    serial = i2c(port=1, address=0x3C)
-    # substitute ssd1331(...) or sh1106(...) below if using that device
-    device = sh1106(serial)
-    #with canvas(device) as draw:
-    #        draw.rectangle(device.bounding_box, outline="white", fill="black")
-    #        draw.text((4, 4), "Setup; Last Backup:", fill=1)
-    #        draw.text((4,30), lastbackup, fill=1)
+    if not oled_available:
+        logger.info('Skipping OLED initialization because hardware is unavailable.')
 
     first_button_pushed = multiprocessing.Event()
     animation_finished = multiprocessing.Event()
-    gallery_update_event = multiprocessing.Event()    
+    gallery_update_event = multiprocessing.Event()
     oled_update_event = multiprocessing.Event()
     photo_taken_event = multiprocessing.Event()
     animation_breakpoint = multiprocessing.Event()
 
-    # GPIO callbacks
     def but1_callback(channel):
         print('first button pushed')
-        #if first_button_pushed.is_set():
-            #first_button_pushed.clear()
-        #else:
         first_button_pushed.set()
-    # GPIO callbacks
+
     def but2_callback(channel):
-        
-        ##just for testin
-        
         print('backup button pushed')
-        #GPIO.output(led_pin,1)
-        #ledcounter = 0
-        #for ledcounter in range (10):
-        #    GPIO.output(led_pin,1)
-        #    time.sleep(0.25)
-        #    GPIO.output(led_pin,0)
-        #    time.sleep(0.25)
         print('test: backing up now')
-        #subprocess.call("/home/pi/programs/usbbackup/backup.sh")    
-        #start bash script to backup/copy data here
-        
-        #start bash
-    
 
-    # GPIO callbacks hooks
-    GPIO.add_event_detect(button1_pin, GPIO.RISING, callback=but1_callback, bouncetime=300)
-    # GPIO callbacks hooks
-    GPIO.add_event_detect(button2_pin, GPIO.FALLING, callback=but2_callback, bouncetime=300)
+    if GPIO is not None:
+        GPIO.add_event_detect(button1_pin, GPIO.RISING, callback=but1_callback, bouncetime=300)
+        GPIO.add_event_detect(button2_pin, GPIO.FALLING, callback=but2_callback, bouncetime=300)
+    else:
+        print('GPIO event detection disabled because RPi.GPIO is unavailable.')
 
-
-    # a process used to run the "long_processing" function in background
-    # the first_button_pushed event is passed along
-    process_led_count = multiprocessing.Process(name='first_process', target=led_countdown, args=(first_button_pushed,)) #led countdown
-    #process_camera = multiprocessing.Process(name='camera_process', target=take_photo, args=(animation_finished,))
     process_timer = multiprocessing.Process(name='timer_process', target=timerfunc, args=(animation_finished,))
     process_gallery = multiprocessing.Process(name='gallery_process', target=update_gallery, args=(gallery_update_event,))
-    process_oled = multiprocessing.Process(name='oled_process', target=update_oled, args=(oled_update_event,))
+    process_led_count = multiprocessing.Process(name='first_process', target=led_countdown, args=(first_button_pushed,))
 
-    
     process_gallery.daemon = True
     process_gallery.start()
-    
-    process_oled.daemon = True
-    process_oled.start()
-    
+
+    if oled_available:
+        process_oled = multiprocessing.Process(name='oled_process', target=update_oled, args=(oled_update_event,))
+        process_oled.daemon = True
+        process_oled.start()
+    else:
+        print('OLED process not started.')
+
     process_timer.daemon = True
     process_timer.start()
-    
-    #process_camera.daemon = True
-    #process_camera.start()
-    
     process_led_count.daemon = True
     process_led_count.start()
 
@@ -1036,9 +1089,10 @@ if __name__ == '__main__':
     #root.focus_set()    
     root.bind("<Escape>", lambda e: (e.widget.withdraw(), e.widget.quit()))
     canvas = tk.Canvas(root,width=w,height=h,highlightthickness=0)
-   
     canvas.pack()
     canvas.configure(background='black')
+    imagesprite = canvas.create_image(w/2, h/2, image=None)
+    root.image = None
     #root.overrideredirect(True)
     root.update()
     
@@ -1056,29 +1110,41 @@ if __name__ == '__main__':
     pics_displayed = 0 #for collage display
     animation_breakpoint_counter = 0 
     camera = cameraInit()
-    overlayImage = readOverlay()
+    overlayImage = None
     ruedigerDisplayed = False
 
-    #showCountdown = readCountdownFromFile()
+    def display_image(pilImage, use_overlay):
+        try:
+            if use_overlay:
+                pilImage = resizeImageToCanvasWithOverlay(pilImage, w, h)
+            else:
+                pilImage = resizeImageToCanvas(pilImage, w, h)
+        except Exception as ex:
+            print("display_image(): resize failed: {}".format(ex))
+        image = ImageTk.PhotoImage(pilImage)
+        canvas.itemconfig(imagesprite, image=image)
+        root.image = image
+        root.update()
+
+    showCountdown = readCountdownFromFile()
+    showSingleImageAlwaysWithOverlay = readShowSingleImageAlwaysWithOverlay()
     showCountdownRefresher = 0
     while True:
-        ignoreOtherEvents = False
         imagechanged = False
         ignoreOverlay = True
-        if showCountdownRefresher == 1000:
+
+        if showCountdownRefresher >= 1000:
             showCountdownRefresher = 0
             showCountdown = readCountdownFromFile()
             showSingleImageAlwaysWithOverlay = readShowSingleImageAlwaysWithOverlay()
 
         showCountdownRefresher += 1
-        if animation_finished.is_set() and not ignoreOtherEvents:
-            #imagepath = newImg()
-            #print("found new photo")
+
+        if animation_finished.is_set():
             animation_breakpoint.clear()
             animation_finished.clear()
             first_button_pushed.clear()
-            animation_breakpoint_counter = 0 
-            ignoreOtherEvents = True
+            animation_breakpoint_counter = 0
             numberOfCaptureTries = 0
             pilImage = captureImage(camera)
             while pilImage is None and numberOfCaptureTries < 3:
@@ -1086,14 +1152,12 @@ if __name__ == '__main__':
                 numberOfCaptureTries += 1
                 time.sleep(0.5)
 
-            animation_finished.clear()
-            first_button_pushed.clear()
             if pilImage is not None:
                 imagechanged = True
                 gallery_update_event.clear()
                 picwait_displayed = False
                 pics_displayed = 0
-                show_last_two_photos = True #flag to show last two photos
+                show_last_two_photos = True
                 newimage = True
             else:
                 print("BITTE NICHT SO NAH RAN RÜDIGER")
@@ -1101,30 +1165,26 @@ if __name__ == '__main__':
                 imagechanged = True
                 ruedigerDisplayed = True
 
-
-
-        if first_button_pushed.is_set() and not picwait_displayed == True and not ignoreOtherEvents and not showCountdown:
-            ignoreOtherEvents = True
+        elif first_button_pushed.is_set() and not picwait_displayed and not showCountdown:
             imagepath = getCountdownImageFromCounter(-1)
             imagechanged = True
-            show_last_two_photos = True #flag to show last two photos
+            show_last_two_photos = True
             picwait_displayed = True
             print("picwait")
-        if animation_breakpoint.is_set() and not ignoreOtherEvents and showCountdown:
-            ignoreOtherEvents = True
+
+        elif animation_breakpoint.is_set() and showCountdown:
             imagepath = getCountdownImageFromCounter(animation_breakpoint_counter)
-            #imagepath = "/home/pi/programs/countdown/pic1.jpg"
             imagechanged = True
-            show_last_two_photos = True #flag to show last two photos
+            show_last_two_photos = True
             picwait_displayed = True
             animation_breakpoint.clear()
             animation_breakpoint_counter += 1
             print(imagepath)
-        if gallery_update_event.is_set() and not ignoreOtherEvents:
-            ignoreOtherEvents = True
+
+        elif gallery_update_event.is_set():
             print("updating gallery")
             ignoreOverlay = False
-            imagepath = randImg(pics_displayed,show_last_two_photos,lastfile)
+            imagepath = randImg(pics_displayed, show_last_two_photos, lastfile)
             lastfile = imagepath
             imagechanged = True
             pics_displayed += 1
@@ -1132,27 +1192,22 @@ if __name__ == '__main__':
                 ignoreOverlay = True
                 pics_displayed = 0
 
-        if imagechanged == True:
-            imagechanged = False
+        if imagechanged:
             if not newimage:
                 try:
                     pilImage = Image.open(imagepath)
-                except:
-                    imagepath = randImg(1,False)
+                except Exception as ex:
+                    print("main loop: failed to open image '{}': {}".format(imagepath, ex))
+                    imagepath = randImg(1, False)
                     pilImage = Image.open(imagepath)
 
-            if showSingleImageAlwaysWithOverlay and not ignoreOverlay:
-                pilImage = resizeImageToCanvasWithOverlay(pilImage,w,h)
-            else:
-                pilImage = resizeImageToCanvas(pilImage,w,h)
-
-            #updateCanvas(pilImage,root,canvas)
-            image = ImageTk.PhotoImage(pilImage)
-            imagesprite = canvas.create_image(w/2,h/2,image=image)
-            root.update()
+            display_image(pilImage, showSingleImageAlwaysWithOverlay and not ignoreOverlay)
             gallery_update_event.clear()
             if ruedigerDisplayed:
                 reactToRuedigerDisplayed()
                 ruedigerDisplayed = False
             newimage = False
+
+        else:
+            time.sleep(0.05)
     
