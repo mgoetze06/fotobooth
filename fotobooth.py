@@ -191,6 +191,8 @@ def createQuadraticCollage(size,imagepaths,folder):
         x += thumbnail_width
         y = 0
 
+    overlay = readOverlay("overlayQuadratic.png")
+    new_img = overlayImage(new_img,overlay)
     return new_img
 
 def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
@@ -558,23 +560,25 @@ def captureImage(camera):
         print("captureImage(): error capturing photo")
     return image
 
-def readOverlay():
-    directory = "/home/pi/programs/images/"
-    folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
-    filename = os.path.join(folder,"customcollage")
-    filename = os.path.join(filename,"overlay.png")
-    new_img= Image.open(filename)
-    return new_img
-
-def resizeImageToCanvasWithOverlay(pilImage,w,h):
+def readOverlay(overlayFilename):
     try:
-        global overlayImage
+        directory = "/home/pi/programs/images/"
+        folder = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime) #latest created folder
+        filename = os.path.join(folder,"customcollage")
+        filename = os.path.join(filename,overlayFilename)
+        if os.path.isfile(filename):
+            new_img= Image.open(filename)
+            return new_img
+    except:
+        return None
+
+def resizeImageToCanvasWithOverlay(pilImage,w,h,overlayFilename):
+    try:
+
+        overlayImage = readOverlay(overlayFilename)
         if overlayImage is None:
-            overlayImage = readOverlay()
-        w = 1600
-        h = 1
+            return pilImage
         imgWidth, imgHeight = pilImage.size
-        h = imgHeight
         if imgWidth > w or imgHeight > h:
             ratio = min(w/imgWidth, h/imgHeight)
             imgWidth = int(imgWidth*ratio)
@@ -587,6 +591,14 @@ def resizeImageToCanvasWithOverlay(pilImage,w,h):
     except:
         print("error setting overlay image")
     return pilImage
+
+
+def overlayImage(sourceImage,overlay):
+    try:
+        sourceImage.paste(overlay,(0,0),overlay)
+    except:
+        print("error setting overlay")
+    return sourceImage
 
 def resizeImageToCanvas(pilImage,w,h):
     imgWidth, imgHeight = pilImage.size
@@ -883,10 +895,11 @@ def readCountdownFromFile():
         return False
     
 def readShowSingleImageAlwaysWithOverlay():
-    try:
-        return getShowSingleImageAlwaysWithOverlay()
-    except:
-        return False
+    return False
+    # try:
+    #     return getShowSingleImageAlwaysWithOverlay()
+    # except:
+    #     return False
 
 if __name__ == '__main__':
     
@@ -1056,7 +1069,7 @@ if __name__ == '__main__':
     pics_displayed = 0 #for collage display
     animation_breakpoint_counter = 0 
     camera = cameraInit()
-    overlayImage = readOverlay()
+
     ruedigerDisplayed = False
 
     #showCountdown = readCountdownFromFile()
@@ -1142,7 +1155,7 @@ if __name__ == '__main__':
                     pilImage = Image.open(imagepath)
 
             if showSingleImageAlwaysWithOverlay and not ignoreOverlay:
-                pilImage = resizeImageToCanvasWithOverlay(pilImage,w,h)
+                pilImage = resizeImageToCanvasWithOverlay(pilImage,1600,1,"overlay.png")
             else:
                 pilImage = resizeImageToCanvas(pilImage,w,h)
 
