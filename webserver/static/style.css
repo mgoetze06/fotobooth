@@ -54,45 +54,60 @@ button{
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 0; /* reduce outer spacing to focus on image */
   min-height: 100vh;
   box-sizing: border-box;
+  background-color: transparent; /* let background be transparent */
 }
 
 .last-image-wrapper {
   width: 100%;
-  max-width: 1200px;
-  min-height: 60vh;
+  max-width: none; /* allow image to use full width */
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #222;
-  border-radius: 14px;
-  padding: 1rem;
-  box-shadow: inset 0 0 16px rgba(0,0,0,0.3);
+  background-color: transparent; /* remove background box so image dominates */
+  border-radius: 0;
+  padding: 0; /* remove padding around image */
+  box-shadow: none;
 }
 
 .last-image {
   width: 100%;
   height: auto;
-  max-height: calc(100vh - 240px);
+  max-height: 100vh; /* use full viewport height */
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: 0; /* remove rounded corners to show only image */
+  display: block;
 }
 
 .last-image-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   justify-content: center;
   width: 100%;
   max-width: 1200px;
+  margin-top: 0.5rem;
 }
 
 .last-image-controls button {
   width: auto;
-  min-width: 10em;
+  min-width: 8em;
+  background-color: rgba(0,0,0,0.35); /* subtle translucent buttons */
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  opacity: 0.9;
+  transition: opacity 0.12s ease, transform 0.08s ease;
+}
+
+.last-image-controls button:hover{
+  opacity: 1;
+  transform: translateY(-2px);
 }
 
 .stat{
@@ -251,4 +266,125 @@ button{
   .card{
     width: 300px;
   }
+}
+
+/* Preview-only page tweaks: keep image full-viewport and avoid scrollbars */
+.preview-only{
+  margin: 0;
+  height: 100vh;
+  overflow: hidden; /* prevent scrollbars */
+  background: rgba(0,0,0,0.95); /* dark background for focus */
+}
+.preview-only h1{ display: none; }
+.preview-only .last-image-page{
+  height: 100vh;
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
+}
+.preview-only .last-image-wrapper{
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+.preview-only .last-image{
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.preview-only .last-image-controls{
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 12px;
+  gap: 0.4rem;
+  background: transparent;
+  padding: 6px 8px;
+}
+
+.preview-only .last-image-controls button{
+  min-width: 5.5em;
+  font-size: 0.95rem;
+}
+
+/* Overlay hidden by default, shown when body.controls-visible is present */
+.preview-only .last-image-controls{
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(10px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+}
+.preview-only.controls-visible .last-image-controls{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* slightly smaller compact slider text */
+.preview-only .size-label{ color: #fff; font-size: 0.95rem; margin-right: 0.4rem; }
+.preview-only input[type="range"]{ width: 180px; }
+
+/* floating back button */
+.preview-only .back-button{
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  transition: transform 120ms ease, background 120ms ease, opacity 160ms ease;
+  z-index: 60;
+  opacity: 0; /* hidden until user activity */
+  pointer-events: none;
+}
+.preview-only .back-button:hover{ transform: translateY(-2px); background: rgba(0,0,0,0.45); }
+.preview-only .back-button svg{ fill: currentColor; }
+
+/* ensure overlay and back button are above image */
+.preview-only .back-button, .preview-only .last-image-controls{ z-index: 85; }
+
+/* Tiny refresh progress bar */
+.preview-only .refresh-progress{
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0; /* pinned to very bottom of the screen */
+  width: 220px;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px 6px 0 0; /* rounded top corners */
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45) inset;
+  opacity: 0.75; /* slightly transparent and always visible */
+  pointer-events: none;
+  z-index: 70;
+}
+.preview-only .refresh-progress-bar{
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.7));
+  transition: width 100ms linear;
+}
+
+/* show back button when controls are visible */
+.preview-only.controls-visible .back-button{
+  opacity: 1;
+  pointer-events: auto;
 }

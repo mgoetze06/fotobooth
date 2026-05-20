@@ -6,24 +6,132 @@
     <title>Letztes Bild</title>
     <link href="/static/style.css" rel="stylesheet" />
   </head>
-  <body>
+  <body class="preview-only">
     <h1>{{ 'Zufallsbild' if mode == 'random' else 'Letztes Bild' }}</h1>
     <div class="last-image-page" data-mode="{{ mode }}">
       <div class="last-image-wrapper">
         <img src="{{ image_url }}" alt="Preview Image" class="last-image" />
       </div>
-      <div class="last-image-controls">
-        <button onclick="location.href='/'">Zurück zur Übersicht</button>
+      <!-- tiny refresh progress bar (moved out of overlay so always visible) -->
+      <div class="refresh-progress" aria-hidden="true">
+        <div id="refreshProgressBar" class="refresh-progress-bar"></div>
+      </div>
+
+      <div class="last-image-controls" id="overlayControls" aria-hidden="true">
+        <label for="sizeSlider" class="size-label">Intervall: <span id="sizeValue">5s</span></label>
+        <input type="range" id="sizeSlider" min="1" max="30" value="5" />
         <button onclick="location.href='/downloadsingle'">Bild herunterladen</button>
         <button onclick="location.href='/preview?mode={{ 'random' if mode == 'latest' else 'latest' }}'">
           {{ 'Wechsel zu Zufallsbild' if mode == 'latest' else 'Wechsel zu letztem Bild' }}
         </button>
       </div>
+
+      <!-- small floating back/close button -->
+      <button class="back-button" id="backButton" title="Zurück" onclick="location.href='/'" aria-label="Zurück">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H19v-2z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
     <script>
       const lastImage = document.querySelector('.last-image');
       const mode = document.querySelector('.last-image-page').dataset.mode;
       let currentTimestamp = null;
+
+      // Interval slider elements (repurposed)
+      const sizeSlider = document.getElementById('sizeSlider');
+      const sizeValue = document.getElementById('sizeValue');
+      const progressBar = document.getElementById('refreshProgressBar');
+      const DEFAULT_INTERVAL = 5; // seconds
+      let refreshTimer = null;
+      let progressTimer = null;
+      let refreshMs = DEFAULT_INTERVAL * 1000;
+
+      function updateIntervalDisplay(sec) {
+        if (sizeValue) sizeValue.textContent = sec + 's';
+      }
+
+      // Load saved interval (seconds)
+      const savedInterval = (function() {
+        try { return Number(localStorage.getItem('previewInterval')) || DEFAULT_INTERVAL; } catch (e) { return DEFAULT_INTERVAL; }
+      })();
+
+      if (sizeSlider) sizeSlider.value = savedInterval;
+      updateIntervalDisplay(savedInterval);
+
+      function resetProgress() {
+        if (!progressBar) return;
+        progressBar.style.width = '0%';
+        if (progressTimer) clearInterval(progressTimer);
+        const start = Date.now();
+        progressTimer = setInterval(() => {
+          const elapsed = Date.now() - start;
+          const pct = Math.min(1, elapsed / refreshMs);
+          progressBar.style.width = (pct * 100) + '%';
+          if (pct >= 1) {
+            clearInterval(progressTimer);
+          }
+        }, 100);
+      }
+
+      function startRefreshTimer(seconds) {
+        refreshMs = Number(seconds) * 1000;
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(() => { checkLastImage(); resetProgress(); }, refreshMs);
+        resetProgress();
+      }
+
+      if (sizeSlider) {
+        sizeSlider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          updateIntervalDisplay(val);
+        });
+        sizeSlider.addEventListener('change', (e) => {
+          const val = Number(e.target.value);
+          try { localStorage.setItem('previewInterval', String(val)); } catch (err) {}
+          startRefreshTimer(val);
+        });
+      }
+
+      // Overlay controls show/hide logic
+      const overlay = document.getElementById('overlayControls');
+      let overlayTimer = null;
+      const OVERLAY_TIMEOUT = 2500; // ms
+
+      function showOverlay() {
+        document.body.classList.add('controls-visible');
+        if (overlay) overlay.setAttribute('aria-hidden', 'false');
+        if (overlayTimer) clearTimeout(overlayTimer);
+        overlayTimer = setTimeout(hideOverlay, OVERLAY_TIMEOUT);
+      }
+
+      function hideOverlay() {
+        document.body.classList.remove('controls-visible');
+        if (overlay) overlay.setAttribute('aria-hidden', 'true');
+      }
+
+      // Show overlay on mousemove/touch and keep visible while hovering overlay
+      let lastMove = Date.now();
+      function onUserActivity() {
+        lastMove = Date.now();
+        showOverlay();
+      }
+
+      document.addEventListener('mousemove', onUserActivity, { passive: true });
+      document.addEventListener('touchstart', onUserActivity, { passive: true });
+
+      if (overlay) {
+        overlay.addEventListener('mouseenter', () => {
+          if (overlayTimer) clearTimeout(overlayTimer);
+          document.body.classList.add('controls-visible');
+        });
+        overlay.addEventListener('mouseleave', () => {
+          overlayTimer = setTimeout(hideOverlay, 800);
+        });
+      }
+
+      // Initially show overlay for a short time so users discover controls
+      setTimeout(showOverlay, 200);
 
       async function checkLastImage() {
         try {
@@ -48,8 +156,11 @@
         }
       }
 
-      setInterval(checkLastImage, 5000);
-      window.addEventListener('load', checkLastImage);
+      // Start by checking once, then start timer using saved interval
+      window.addEventListener('load', () => {
+        checkLastImage();
+        startRefreshTimer(savedInterval);
+      });
     </script>
   </body>
 </html>
