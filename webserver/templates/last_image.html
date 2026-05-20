@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Letztes Bild</title>
+    <link href="/static/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    <h1>Letztes Bild</h1>
+    <div class="last-image-page">
+      <div class="last-image-wrapper">
+        <img src="{{ image_url }}" alt="Letztes Bild" class="last-image" />
+      </div>
+      <div class="last-image-controls">
+        <button onclick="location.href='/'">Zurück zur Übersicht</button>
+        <button onclick="location.href='/downloadsingle'">Bild herunterladen</button>
+      </div>
+    </div>
+    <script>
+      const lastImage = document.querySelector('.last-image');
+      let currentTimestamp = null;
+
+      async function checkLastImage() {
+        try {
+          const response = await fetch('/image/last/meta');
+          if (!response.ok) {
+            return;
+          }
+          const data = await response.json();
+          if (!data.exists) {
+            return;
+          }
+          if (currentTimestamp === null) {
+            currentTimestamp = data.modified;
+            return;
+          }
+          if (data.modified !== currentTimestamp) {
+            currentTimestamp = data.modified;
+            lastImage.src = `/image/last?ts=${Date.now()}`;
+          }
+        } catch (err) {
+          console.warn('Unable to refresh last image:', err);
+        }
+      }
+
+      setInterval(checkLastImage, 5000);
+      window.addEventListener('load', checkLastImage);
+    </script>
+  </body>
+</html>

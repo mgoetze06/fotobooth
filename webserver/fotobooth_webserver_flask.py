@@ -15,6 +15,7 @@ import datetime
 import time
 import tempfile
 import shutil
+import mimetypes
 
 
 try:
@@ -229,6 +230,29 @@ def download():
         )
     else:
         return redirect(url_for('on_get'))
+
+@app.route('/lastimage')
+def last_image():
+    return render_template('last_image.html', image_url=url_for('last_image_file'))
+
+@app.route('/image/last')
+def last_image_file():
+    file_path = getLatestImage()
+    if not os.path.exists(file_path):
+        return redirect(url_for('on_get'))
+    mime_type, _ = mimetypes.guess_type(file_path)
+    return send_file(file_path, mimetype=mime_type or 'application/octet-stream')
+
+@app.route('/image/last/meta')
+def last_image_meta():
+    file_path = getLatestImage()
+    if not os.path.exists(file_path):
+        return {'exists': False}
+    return {
+        'exists': True,
+        'filename': os.path.basename(file_path),
+        'modified': os.path.getmtime(file_path)
+    }
 
 @app.route('/downloadchunk/<int:chunk_index>')
 def download_chunk(chunk_index):
