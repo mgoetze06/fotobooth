@@ -9,6 +9,7 @@ from glob import glob
 from io import BytesIO
 from zipfile import ZipFile
 import os
+import random
 import subprocess
 import psutil
 import datetime
@@ -231,21 +232,47 @@ def download():
     else:
         return redirect(url_for('on_get'))
 
+def getRandomImage():
+    folder = getLatestFolder()
+    files = [path for path in glob(os.path.join(folder, '*')) if os.path.isfile(path)]
+    if not files:
+        return getLatestImage()
+    return random.choice(files)
+
+@app.route('/preview')
+def preview_image_page():
+    mode = request.args.get('mode', 'latest')
+    if mode not in ('latest', 'random'):
+        mode = 'latest'
+    return render_template(
+        'last_image.html',
+        image_url=url_for('preview_image', mode=mode),
+        mode=mode
+    )
+
 @app.route('/lastimage')
 def last_image():
-    return render_template('last_image.html', image_url=url_for('last_image_file'))
+    return redirect(url_for('preview_image_page', mode='latest'))
 
-@app.route('/image/last')
-def last_image_file():
-    file_path = getLatestImage()
+@app.route('/image/preview')
+def preview_image():
+    mode = request.args.get('mode', 'latest')
+    if mode == 'random':
+        file_path = getRandomImage()
+    else:
+        file_path = getLatestImage()
     if not os.path.exists(file_path):
         return redirect(url_for('on_get'))
     mime_type, _ = mimetypes.guess_type(file_path)
     return send_file(file_path, mimetype=mime_type or 'application/octet-stream')
 
-@app.route('/image/last/meta')
-def last_image_meta():
-    file_path = getLatestImage()
+@app.route('/image/preview/meta')
+def preview_image_meta():
+    mode = request.args.get('mode', 'latest')
+    if mode == 'random':
+        file_path = getRandomImage()
+    else:
+        file_path = getLatestImage()
     if not os.path.exists(file_path):
         return {'exists': False}
     return {

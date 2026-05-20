@@ -7,23 +7,27 @@
     <link href="/static/style.css" rel="stylesheet" />
   </head>
   <body>
-    <h1>Letztes Bild</h1>
-    <div class="last-image-page">
+    <h1>{{ 'Zufallsbild' if mode == 'random' else 'Letztes Bild' }}</h1>
+    <div class="last-image-page" data-mode="{{ mode }}">
       <div class="last-image-wrapper">
-        <img src="{{ image_url }}" alt="Letztes Bild" class="last-image" />
+        <img src="{{ image_url }}" alt="Preview Image" class="last-image" />
       </div>
       <div class="last-image-controls">
         <button onclick="location.href='/'">Zurück zur Übersicht</button>
         <button onclick="location.href='/downloadsingle'">Bild herunterladen</button>
+        <button onclick="location.href='/preview?mode={{ 'random' if mode == 'latest' else 'latest' }}'">
+          {{ 'Wechsel zu Zufallsbild' if mode == 'latest' else 'Wechsel zu letztem Bild' }}
+        </button>
       </div>
     </div>
     <script>
       const lastImage = document.querySelector('.last-image');
+      const mode = document.querySelector('.last-image-page').dataset.mode;
       let currentTimestamp = null;
 
       async function checkLastImage() {
         try {
-          const response = await fetch('/image/last/meta');
+          const response = await fetch(`/image/preview/meta?mode=${mode}`);
           if (!response.ok) {
             return;
           }
@@ -37,10 +41,10 @@
           }
           if (data.modified !== currentTimestamp) {
             currentTimestamp = data.modified;
-            lastImage.src = `/image/last?ts=${Date.now()}`;
+            lastImage.src = `/image/preview?mode=${mode}&ts=${Date.now()}`;
           }
         } catch (err) {
-          console.warn('Unable to refresh last image:', err);
+          console.warn('Unable to refresh preview image:', err);
         }
       }
 
