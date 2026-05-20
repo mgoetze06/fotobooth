@@ -85,6 +85,24 @@ socket.on('disk', function(msg) {
   socket.on('zipfiles', function(msg) {
     document.getElementById('zipfiles').innerHTML = msg.processed + " / " + msg.total;
   });
+  socket.on('zipchunksready', function(msg) {
+    const container = document.getElementById('zipchunks');
+    container.innerHTML = '';
+    if (msg.chunks && msg.chunks.length > 0) {
+      container.innerHTML = '<p>Download the zip chunks below:</p>';
+      msg.chunks.forEach(function(chunk) {
+        const sizeMb = (chunk.size / (1024*1024)).toFixed(1);
+        const link = document.createElement('a');
+        link.href = '/downloadchunk/' + chunk.index;
+        link.textContent = chunk.name + ' (' + chunk.count + ' files, ' + sizeMb + ' MB)';
+        link.style.display = 'block';
+        container.appendChild(link);
+      });
+    } else {
+      container.innerHTML = '<p>No zip chunks available.</p>';
+    }
+    document.getElementById('zipfiles').style.display = 'none';
+  });
   socket.on('streamfinished', function(msg) {
     window.location.href = '/download';
     document.getElementById('zipfiles').style.display = 'none';
@@ -96,6 +114,7 @@ socket.on('disk', function(msg) {
 function startStreamCreation(){
     socket.emit('createStream');
     document.getElementById('zipfiles').style.display = 'block';
+    document.getElementById('zipchunks').innerHTML = '';
 
 }
 

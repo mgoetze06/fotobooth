@@ -1,5 +1,5 @@
 #!/bin/sh
 sudo killall python
-python /home/pi/programs/usbbackup/backup_usb.py
+python3 /home/pi/programs/usbbackup/backup_usb.py
 sudo killall python
-sudo python /home/pi/programs/fotobooth.py
+sudo python3 /home/pi/programs/fotobooth.py

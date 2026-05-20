@@ -13,6 +13,8 @@ import subprocess
 import psutil
 import datetime
 import time
+import tempfile
+import shutil
 
 
 try:
@@ -29,6 +31,19 @@ socketio = SocketIO(app)
 
 photos_temp = 0
 stream = None
+zip_chunk_dir = None
+zip_chunk_files = []
+
+
+def cleanup_zip_chunks():
+    global zip_chunk_dir, zip_chunk_files
+    if zip_chunk_dir and os.path.exists(zip_chunk_dir):
+        try:
+            shutil.rmtree(zip_chunk_dir)
+        except Exception:
+            pass
+    zip_chunk_dir = None
+    zip_chunk_files = []
 
 
 def readColor():
@@ -117,30 +132,67 @@ def getCountdown():
 
 @socketio.on('createStream')
 def createStreamFromFiles():
-    global stream
+    global stream, zip_chunk_dir, zip_chunk_files
     target = getLatestFolder()
-    listImages= glob(os.path.join(target, '*'))
-    if len(listImages)>0:
-        stream = BytesIO()
-        processed = 0
-        total = len(listImages)
-        with ZipFile(stream, 'w') as zf:
-            for file in listImages:
-                if not os.path.isdir(file):
-                    processed += 1
-                    zf.write(file, os.path.basename(file))
-                    try:    
-                        print("processed",processed)
-                        print("total",total)
-                        emit('zipfiles', {'processed': processed, 'total': total},broadcast=True)
-                    except:
-                        print("failed to send zipfiles loading status")
-                        pass
-                else:
-                    total = total -1
+    listImages = [path for path in glob(os.path.join(target, '*')) if not os.path.isdir(path)]
+    if len(listImages) == 0:
+        emit('zipfileserror', {'error': 'No files found for download'})
+        return
 
-        stream.seek(0)
-        emit("streamfinished",broadcast=True)
+    cleanup_zip_chunks()
+    zip_chunk_dir = tempfile.mkdtemp(prefix='fotobooth_zip_')
+    zip_chunk_files = []
+
+    max_files_per_chunk = 50
+    max_bytes_per_chunk = 80 * 1024 * 1024
+    current_chunk = []
+    current_size = 0
+    total = len(listImages)
+    processed = 0
+    chunks = []
+
+    for file in sorted(listImages):
+        file_size = os.path.getsize(file)
+        if current_chunk and (len(current_chunk) >= max_files_per_chunk or current_size + file_size > max_bytes_per_chunk):
+            chunks.append(current_chunk)
+            current_chunk = []
+            current_size = 0
+        current_chunk.append(file)
+        current_size += file_size
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    for chunk_index, chunk_files in enumerate(chunks, start=1):
+        zip_name = f'FotoboxBilder_part{chunk_index:02d}.zip'
+        zip_path = os.path.join(zip_chunk_dir, zip_name)
+        with ZipFile(zip_path, 'w') as zf:
+            for file in chunk_files:
+                zf.write(file, os.path.basename(file))
+                processed += 1
+                try:
+                    emit('zipfiles', {'processed': processed, 'total': total}, broadcast=True)
+                except Exception:
+                    pass
+
+        zip_chunk_files.append({
+            'index': chunk_index - 1,
+            'path': zip_path,
+            'name': zip_name,
+            'count': len(chunk_files),
+            'size': os.path.getsize(zip_path)
+        })
+
+    emit('zipchunksready', {
+        'chunks': [
+            {
+                'index': info['index'],
+                'name': info['name'],
+                'count': info['count'],
+                'size': info['size']
+            }
+            for info in zip_chunk_files
+        ]
+    }, broadcast=True)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -177,6 +229,18 @@ def download():
         )
     else:
         return redirect(url_for('on_get'))
+
+@app.route('/downloadchunk/<int:chunk_index>')
+def download_chunk(chunk_index):
+    global zip_chunk_files
+    if chunk_index < 0 or chunk_index >= len(zip_chunk_files):
+        return redirect(url_for('on_get'))
+    info = zip_chunk_files[chunk_index]
+    return send_file(
+        info['path'],
+        as_attachment=True,
+        download_name=info['name']
+    )
 
 @app.route('/reboot')
 def reboot():
