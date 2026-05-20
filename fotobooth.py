@@ -207,7 +207,7 @@ def createQuadraticCollage(size,imagepaths,folder):
         new_img= Image.new(mode="RGB", size=(scr_w,scr_h), color=(0,0,0))
 
     if len(files) < (size*size):
-        return new_img
+        return None
     
     try:
         new_img = new_img.resize((scr_w,scr_h))
@@ -270,7 +270,7 @@ def createCustomCollageWithThreeImagesOnRightSide(imagepaths,folder):
     ims = []
     stackedrows = 3
     if len(files) < (stackedrows):
-        return new_img
+        return None
     thumbnail_height = round(scr_h/stackedrows)
     currentUsedPhotosInCollageList = []
     for i in range(0,stackedrows):
@@ -785,7 +785,7 @@ def randImg(pics_displayed,show_last_two_photos_local,lastfile):
                 logger.info("Selected collage: %s", myimage)
             except Exception as ex:
                 logger.warning("randImg(): error accessing existing collages: %s", ex)
-                myimage = "/home/pi/programs/countdown/picwait.jpg"
+                myimage = selectRandomImageFromImageList(imglist)
             
         else:
             if pics_displayed < 3 and len(imglist) > 2 and show_last_two_photos:
@@ -804,15 +804,9 @@ def randImg(pics_displayed,show_last_two_photos_local,lastfile):
                 myimage = os.path.join(folder, myimage)
                 logger.info("Selected recent image: %s", myimage)
             else:
-                try:
-                    myimage = random.choice(imglist)
-                except Exception:
-                    myimage = "/home/pi/programs/countdown/picwait.jpg"
+                myimage = selectRandomImageFromImageList(imglist)
                 while (myimage == lastfile) or (myimage == "collages"):
-                    try:
-                        myimage = random.choice(imglist)
-                    except Exception:
-                        myimage = "/home/pi/programs/countdown/picwait.jpg"
+                    myimage = selectRandomImageFromImageList(imglist)
                 lastfile = myimage
                 if "picwait" not in myimage:
                     myimage = os.path.join(folder, myimage)
@@ -820,6 +814,13 @@ def randImg(pics_displayed,show_last_two_photos_local,lastfile):
                 show_last_two_photos = False
     return myimage
 
+def selectRandomImageFromImageList(imglist):
+    try:
+        myimage = random.choice(imglist)
+    except Exception:
+        myimage = "/home/pi/programs/countdown/picwait.jpg"
+
+    return myimage
 
 def newImg():
     global imglist
