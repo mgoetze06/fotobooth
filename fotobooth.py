@@ -1033,16 +1033,22 @@ if __name__ == '__main__':
     animation_breakpoint = multiprocessing.Event()
 
     def but1_callback(channel):
-        print('first button pushed')
+        logger.info('first button pushed')
         first_button_pushed.set()
 
     def but2_callback(channel):
-        print('backup button pushed')
-        print('test: backing up now')
+        logger.info('backup button pushed')
+
+    def register_gpio_event(pin, edge, callback):
+        try:
+            GPIO.add_event_detect(pin, edge, callback=callback, bouncetime=300, threaded_callback=True)
+        except TypeError:
+            logger.warning('GPIO threaded_callback is unsupported in this RPi.GPIO build; falling back to default event detection')
+            GPIO.add_event_detect(pin, edge, callback=callback, bouncetime=300)
 
     if GPIO is not None:
-        GPIO.add_event_detect(button1_pin, GPIO.RISING, callback=but1_callback, bouncetime=300)
-        GPIO.add_event_detect(button2_pin, GPIO.FALLING, callback=but2_callback, bouncetime=300)
+        register_gpio_event(button1_pin, GPIO.RISING, but1_callback)
+        register_gpio_event(button2_pin, GPIO.FALLING, but2_callback)
     else:
         print('GPIO event detection disabled because RPi.GPIO is unavailable.')
 
@@ -1082,17 +1088,24 @@ if __name__ == '__main__':
     root.persistent_image = None
     root.attributes('-fullscreen',True)
     root.configure(background='black')
-    
-    #root.focus_set()    
-    root.bind("<Escape>", lambda e: (e.widget.withdraw(), e.widget.quit()))
+
+    def on_escape(event):
+        logger.warning('Escape pressed, ignoring accidental close/hide.')
+        return 'break'
+
+    def on_close():
+        logger.warning('WM_DELETE_WINDOW requested, ignoring to keep the backend running.')
+
+    # Do not hide or quit the GUI on Escape; log it so we can see if it is triggered.
+    root.bind("<Escape>", on_escape)
+    root.protocol("WM_DELETE_WINDOW", on_close)
+
     canvas = tk.Canvas(root,width=w,height=h,highlightthickness=0)
     canvas.pack()
     canvas.configure(background='black')
     imagesprite = canvas.create_image(w/2, h/2, image=None)
     root.image = None
-    #root.overrideredirect(True)
-    root.update()
-    
+
     startWebserver()
     scr_w = 1920
     scr_h = 1080
@@ -1121,27 +1134,37 @@ if __name__ == '__main__':
         image = ImageTk.PhotoImage(pilImage)
         canvas.itemconfig(imagesprite, image=image)
         root.image = image
-        root.update()
 
-    showCountdown = readCountdownFromFile()
-    showSingleImageAlwaysWithOverlay = readShowSingleImageAlwaysWithOverlay()
-    showCountdownRefresher = 0
-    while True:
+    state = {
+        'showCountdown': readCountdownFromFile(),
+        'showSingleImageAlwaysWithOverlay': readShowSingleImageAlwaysWithOverlay(),
+        'showCountdownRefresher': 0,
+        'lastfile': lastfile,
+        'show_last_two_photos': show_last_two_photos,
+        'picwait_displayed': picwait_displayed,
+        'ignoreOtherEvents': ignoreOtherEvents,
+        'newimage': newimage,
+        'pics_displayed': pics_displayed,
+        'animation_breakpoint_counter': animation_breakpoint_counter,
+        'ruedigerDisplayed': ruedigerDisplayed,
+    }
+
+    def process_main_loop():
         imagechanged = False
         ignoreOverlay = True
 
-        if showCountdownRefresher >= 1000:
-            showCountdownRefresher = 0
-            showCountdown = readCountdownFromFile()
-            showSingleImageAlwaysWithOverlay = readShowSingleImageAlwaysWithOverlay()
+        if state['showCountdownRefresher'] >= 1000:
+            state['showCountdownRefresher'] = 0
+            state['showCountdown'] = readCountdownFromFile()
+            state['showSingleImageAlwaysWithOverlay'] = readShowSingleImageAlwaysWithOverlay()
 
-        showCountdownRefresher += 1
+        state['showCountdownRefresher'] += 1
 
         if animation_finished.is_set():
             animation_breakpoint.clear()
             animation_finished.clear()
             first_button_pushed.clear()
-            animation_breakpoint_counter = 0
+            state['animation_breakpoint_counter'] = 0
             numberOfCaptureTries = 0
             pilImage = captureImage(camera)
             while pilImage is None and numberOfCaptureTries < 3:
@@ -1152,45 +1175,45 @@ if __name__ == '__main__':
             if pilImage is not None:
                 imagechanged = True
                 gallery_update_event.clear()
-                picwait_displayed = False
-                pics_displayed = 0
-                show_last_two_photos = True
-                newimage = True
+                state['picwait_displayed'] = False
+                state['pics_displayed'] = 0
+                state['show_last_two_photos'] = True
+                state['newimage'] = True
             else:
                 print("BITTE NICHT SO NAH RAN RÜDIGER")
                 imagepath = readRuediger()
                 imagechanged = True
-                ruedigerDisplayed = True
+                state['ruedigerDisplayed'] = True
 
-        elif first_button_pushed.is_set() and not picwait_displayed and not showCountdown:
+        elif first_button_pushed.is_set() and not state['picwait_displayed'] and not state['showCountdown']:
             imagepath = getCountdownImageFromCounter(-1)
             imagechanged = True
-            show_last_two_photos = True
-            picwait_displayed = True
+            state['show_last_two_photos'] = True
+            state['picwait_displayed'] = True
             print("picwait")
 
-        elif animation_breakpoint.is_set() and showCountdown:
-            imagepath = getCountdownImageFromCounter(animation_breakpoint_counter)
+        elif animation_breakpoint.is_set() and state['showCountdown']:
+            imagepath = getCountdownImageFromCounter(state['animation_breakpoint_counter'])
             imagechanged = True
-            show_last_two_photos = True
-            picwait_displayed = True
+            state['show_last_two_photos'] = True
+            state['picwait_displayed'] = True
             animation_breakpoint.clear()
-            animation_breakpoint_counter += 1
+            state['animation_breakpoint_counter'] += 1
             print(imagepath)
 
         elif gallery_update_event.is_set():
             print("updating gallery")
             ignoreOverlay = False
-            imagepath = randImg(pics_displayed, show_last_two_photos, lastfile)
-            lastfile = imagepath
+            imagepath = randImg(state['pics_displayed'], state['show_last_two_photos'], state['lastfile'])
+            state['lastfile'] = imagepath
             imagechanged = True
-            pics_displayed += 1
-            if pics_displayed == 5:
+            state['pics_displayed'] += 1
+            if state['pics_displayed'] == 5:
                 ignoreOverlay = True
-                pics_displayed = 0
+                state['pics_displayed'] = 0
 
         if imagechanged:
-            if not newimage:
+            if not state['newimage']:
                 try:
                     pilImage = Image.open(imagepath)
                 except Exception as ex:
@@ -1198,13 +1221,14 @@ if __name__ == '__main__':
                     imagepath = randImg(1, False)
                     pilImage = Image.open(imagepath)
 
-            display_image(pilImage, showSingleImageAlwaysWithOverlay and not ignoreOverlay)
+            display_image(pilImage, state['showSingleImageAlwaysWithOverlay'] and not ignoreOverlay)
             gallery_update_event.clear()
-            if ruedigerDisplayed:
+            if state['ruedigerDisplayed']:
                 reactToRuedigerDisplayed()
-                ruedigerDisplayed = False
-            newimage = False
+                state['ruedigerDisplayed'] = False
+            state['newimage'] = False
 
-        else:
-            time.sleep(0.05)
-    
+        root.after(10, process_main_loop)
+
+    process_main_loop()
+    root.mainloop()

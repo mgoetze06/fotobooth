@@ -1,0 +1,18 @@
+[Unit]
+Description=Fotobooth application
+After=graphical.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/programs
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStart=/usr/bin/python3 /home/pi/programs/fotobooth.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/pi/programs/fotobooth-systemd.log
+StandardError=append:/home/pi/programs/fotobooth-systemd.log
+
+[Install]
+WantedBy=graphical.target
