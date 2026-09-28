@@ -100,10 +100,9 @@ def deactivateCountdownBeforeTakingPicture():
         return False
 
 def IsCustomCollageEnabled(folder):
-    if os.path.isdir(os.path.join(folder,"customcollage")):
-        return True
-    else:
-        return False
+    customcollage_dir = os.path.join(folder, "customcollage")
+    custom_image = os.path.join(customcollage_dir, "custom.jpg")
+    return os.path.isdir(customcollage_dir) and os.path.isfile(custom_image)
 
 def enableCustomCollage(folder):
     os.mkdir(os.path.join(folder,"customcollage"))

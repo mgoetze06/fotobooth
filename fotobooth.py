@@ -331,12 +331,10 @@ def update_gallery(e): #collage process
             if files > 3:
                 imglist = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
                 try:
-                    if mode == 0:
-                        new_img = createQuadraticCollage(2,imglist,folder)
-                    elif mode == 1 and IsCustomCollageEnabled(folder):
-                        new_img = createCustomCollageWithThreeImagesOnRightSide(imglist,folder)
+                    if IsCustomCollageEnabled(folder):
+                        new_img = createCustomCollageWithThreeImagesOnRightSide(imglist, folder)
                     else:
-                        new_img = createQuadraticCollage(2,imglist,folder)
+                        new_img = createQuadraticCollage(2, imglist, folder)
                 except Exception as ex:
                     logger.warning("update_gallery(): collage creation failed: %s", ex)
                     new_img = None
